@@ -29,6 +29,7 @@
     <scala.version>2.11.8</scala.version>
     <scala.binary.version>2.11</scala.binary.version>
     <sbt.project.name>kubernetes-integration-tests</sbt.project.name>
+    <spark-distro-archive>YOUR-SPARK-DISTRO-HERE</spark-distro-archive>
   </properties>
   <packaging>jar</packaging>
   <name>Spark Project Kubernetes Integration Tests</name>
@@ -97,6 +98,48 @@
               <goal>compile</goal>
               <goal>testCompile</goal>
             </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>truezip-maven-plugin</artifactId>
+        <version>1.2</version>
+        <executions>
+          <execution>
+            <id>unpack-spark-distro</id>
+            <goals>
+              <goal>copy</goal>
+            </goals>
+            <phase>pre-integration-test</phase>
+            <configuration>
+              <fileset>
+                <directory>${spark-distro-archive}</directory>
+                <outputDirectory>${project.build.directory}/spark-distro-archive</outputDirectory>
+              </fileset>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.4.0</version>
+        <executions>
+          <execution>
+            <id>rename-spark-distro-output-dir</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <workingDirectory>${project.build.directory}/spark-distro-archive</workingDirectory>
+              <executable>/bin/sh</executable>
+              <arguments>
+                <argument>-c</argument>
+                <argument>mv * ../docker</argument>
+              </arguments>
+            </configuration>
           </execution>
         </executions>
       </plugin>
