@@ -24,12 +24,13 @@ import org.apache.http.client.utils.URIBuilder
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Minutes, Seconds, Span}
 
+import org.apache.spark.deploy.k8s.integrationtest.constants.SPARK_DISTRO_PATH
 import org.apache.spark.deploy.k8s.integrationtest.Logging
 
 private[spark] class SparkDockerImageBuilder
   (private val dockerEnv: Map[String, String]) extends Logging{
 
-  private val DOCKER_BUILD_PATH = Paths.get("target", "spark-distro")
+  private val DOCKER_BUILD_PATH = SPARK_DISTRO_PATH
   // Dockerfile paths must be relative to the build path.
   private val BASE_DOCKER_FILE = "dockerfiles/spark-base/Dockerfile"
   private val DRIVER_DOCKER_FILE = "dockerfiles/driver/Dockerfile"

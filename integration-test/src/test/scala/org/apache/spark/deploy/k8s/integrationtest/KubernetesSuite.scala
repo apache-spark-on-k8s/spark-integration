@@ -19,9 +19,10 @@ package org.apache.spark.deploy.k8s.integrationtest
 import java.io.{File, FileOutputStream}
 import java.nio.file.Paths
 import java.util.{Properties, UUID}
+import java.util.regex.Pattern
 
 import com.google.common.base.Charsets
-import com.google.common.io.Files
+import com.google.common.io.{Files, PatternFilenameFilter}
 import io.fabric8.kubernetes.client.internal.readiness.Readiness
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FunSuite}
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
@@ -30,13 +31,14 @@ import scala.collection.JavaConverters._
 
 import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackendFactory
 import org.apache.spark.deploy.k8s.integrationtest.constants.MINIKUBE_TEST_BACKEND
+import org.apache.spark.deploy.k8s.integrationtest.constants.SPARK_DISTRO_PATH
 
 private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll with BeforeAndAfter {
   import KubernetesSuite._
   private val testBackend = IntegrationTestBackendFactory.getTestBackend()
   private val APP_LOCATOR_LABEL = UUID.randomUUID().toString.replaceAll("-", "")
   private var kubernetesTestComponents: KubernetesTestComponents = _
-  private var testAppConf: TestAppConf = _
+  private var sparkAppConf: SparkAppConf = _
 
   override def beforeAll(): Unit = {
     testBackend.initialize()
@@ -48,7 +50,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   }
 
   before {
-    testAppConf = kubernetesTestComponents.newTestJobConf()
+    sparkAppConf = kubernetesTestComponents.newSparkAppConf()
       .set("spark.kubernetes.initcontainer.docker.image", "spark-init:latest")
       .set("spark.kubernetes.driver.docker.image", "spark-driver:latest")
       .set("spark.kubernetes.driver.label.spark-app-locator", APP_LOCATOR_LABEL)
@@ -59,40 +61,21 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     kubernetesTestComponents.deleteNamespace()
   }
 
-  test("Use container-local resources without the resource staging server") {
+  test("Run SparkPi with no resources") {
     assume(testBackend.name == MINIKUBE_TEST_BACKEND)
 
-    testAppConf.setJars(Seq(CONTAINER_LOCAL_HELPER_JAR_PATH))
-    runSparkPiAndVerifyCompletion(CONTAINER_LOCAL_MAIN_APP_RESOURCE)
+    runSparkPiAndVerifyCompletion()
   }
 
-  test("Submit small local files without the resource staging server.") {
-    assume(testBackend.name == MINIKUBE_TEST_BACKEND)
-    testAppConf.setJars(Seq(CONTAINER_LOCAL_HELPER_JAR_PATH))
-    val testExistenceFileTempDir = Files.createTempDir()
-    testExistenceFileTempDir.deleteOnExit()
-    val testExistenceFile = new File(testExistenceFileTempDir, "input.txt")
-    Files.write(TEST_EXISTENCE_FILE_CONTENTS, testExistenceFile, Charsets.UTF_8)
-    testAppConf.set("spark.files", testExistenceFile.getAbsolutePath)
-    runSparkApplicationAndVerifyCompletion(
-      CONTAINER_LOCAL_MAIN_APP_RESOURCE,
-      FILE_EXISTENCE_MAIN_CLASS,
-      Seq(
-        s"File found at /opt/spark/work-dir/${testExistenceFile.getName} with correct contents.",
-        s"File found on the executors at the relative path ${testExistenceFile.getName} with" +
-          s" the correct contents."),
-      Array(testExistenceFile.getName, TEST_EXISTENCE_FILE_CONTENTS))
-  }
-
-  test("Use a very long application name.") {
+  test("Run SparkPi with a very long application name.") {
     assume(testBackend.name == MINIKUBE_TEST_BACKEND)
 
-    testAppConf.setJars(Seq(CONTAINER_LOCAL_HELPER_JAR_PATH))
-      .set("spark.app.name", "long" * 40)
-    runSparkPiAndVerifyCompletion(CONTAINER_LOCAL_MAIN_APP_RESOURCE)
+    sparkAppConf.set("spark.app.name", "long" * 40)
+    runSparkPiAndVerifyCompletion()
   }
 
-  private def runSparkPiAndVerifyCompletion(appResource: String = ""): Unit = {
+  private def runSparkPiAndVerifyCompletion(
+      appResource: String = CONTAINER_LOCAL_SPARK_DISTRO_EXAMPLES_JAR): Unit = {
     runSparkApplicationAndVerifyCompletion(
         appResource,
         SPARK_PI_MAIN_CLASS,
@@ -105,12 +88,10 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       mainClass: String,
       expectedLogOnCompletion: Seq[String],
       appArgs: Array[String]): Unit = {
-    val appArguments = TestAppArguments(
+    val appArguments = SparkAppArguments(
       mainAppResource = appResource,
-      mainClass = mainClass,
-      driverArgs = appArgs,
-      hadoopConfDir = None)
-    TestApp.run(testAppConf, appArguments)
+      mainClass = mainClass)
+    SparkAppLauncher.launch(appArguments, sparkAppConf, TIMEOUT.value.toSeconds.toInt)
     val driverPod = kubernetesTestComponents.kubernetesClient
       .pods()
       .withLabel("spark-app-locator", APP_LOCATOR_LABEL)
@@ -130,40 +111,16 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 }
 
 private[spark] object KubernetesSuite {
-  val EXAMPLES_JAR_FILE = Paths.get("target", "integration-tests-spark-jobs")
-    .toFile
-    .listFiles()(0)
 
-  val HELPER_JAR_FILE = Paths.get("target", "integration-tests-spark-jobs-helpers")
-    .toFile
-    .listFiles()(0)
-  val SUBMITTER_LOCAL_MAIN_APP_RESOURCE = s"file://${EXAMPLES_JAR_FILE.getAbsolutePath}"
-  val CONTAINER_LOCAL_MAIN_APP_RESOURCE = s"local:///opt/spark/examples/" +
-    s"integration-tests-jars/${EXAMPLES_JAR_FILE.getName}"
-  val CONTAINER_LOCAL_HELPER_JAR_PATH = s"local:///opt/spark/examples/" +
-    s"integration-tests-jars/${HELPER_JAR_FILE.getName}"
   val TIMEOUT = PatienceConfiguration.Timeout(Span(2, Minutes))
   val INTERVAL = PatienceConfiguration.Interval(Span(2, Seconds))
-  val SPARK_PI_MAIN_CLASS = "org.apache.spark.deploy.k8s" +
-    ".integrationtest.jobs.SparkPiWithInfiniteWait"
-  val PYSPARK_PI_MAIN_CLASS = "org.apache.spark.deploy.PythonRunner"
-  val SPARK_R_MAIN_CLASS = "org.apache.spark.deploy.RRunner"
-  val PYSPARK_PI_CONTAINER_LOCAL_FILE_LOCATION =
-    "local:///opt/spark/examples/src/main/python/pi.py"
-  val PYSPARK_SORT_CONTAINER_LOCAL_FILE_LOCATION =
-    "local:///opt/spark/examples/src/main/python/sort.py"
-  val SPARK_R_DATAFRAME_SUBMITTER_FILE_LOCATION =
-    "local:///opt/spark/examples/src/main/r/dataframe.R"
-  val SPARK_R_DATAFRAME_CONTAINER_LOCAL_FILE_LOCATION =
-    "src/test/R/dataframe.R"
-  val PYSPARK_PI_SUBMITTER_LOCAL_FILE_LOCATION = "src/test/python/pi.py"
-  val FILE_EXISTENCE_MAIN_CLASS = "org.apache.spark.deploy.k8s" +
-    ".integrationtest.jobs.FileExistenceTest"
-  val GROUP_BY_MAIN_CLASS = "org.apache.spark.deploy.k8s" +
-    ".integrationtest.jobs.GroupByTest"
-  val JAVA_OPTIONS_MAIN_CLASS = "org.apache.spark.deploy.k8s" +
-    ".integrationtest.jobs.JavaOptionsTest"
-  val TEST_EXISTENCE_FILE_CONTENTS = "contents"
+  val SPARK_DISTRO_EXAMPLES_JAR_FILE: File = Paths.get(SPARK_DISTRO_PATH.toFile.getAbsolutePath,
+    "examples", "jars")
+    .toFile
+    .listFiles(new PatternFilenameFilter(Pattern.compile("^spark-examples_.*\\.jar$")))(0)
+  val CONTAINER_LOCAL_SPARK_DISTRO_EXAMPLES_JAR: String = s"local:///opt/spark/examples/" +
+    s"${SPARK_DISTRO_EXAMPLES_JAR_FILE.getName}"
+  val SPARK_PI_MAIN_CLASS: String = "org.apache.spark.examples.SparkPi"
 
   case object ShuffleNotReadyException extends Exception
 }

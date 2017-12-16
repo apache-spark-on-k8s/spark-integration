@@ -16,11 +16,15 @@
  */
 package org.apache.spark.deploy.k8s.integrationtest
 
+import java.nio.file.Paths
 import java.util.UUID
 
 import io.fabric8.kubernetes.client.DefaultKubernetesClient
-import org.scalatest.concurrent.Eventually
+import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
+import scala.collection.mutable
 import scala.collection.JavaConverters._
+
+import org.apache.spark.deploy.k8s.integrationtest.constants.SPARK_DISTRO_PATH
 
 private[spark] class KubernetesTestComponents(defaultClient: DefaultKubernetesClient) {
 
@@ -48,15 +52,14 @@ private[spark] class KubernetesTestComponents(defaultClient: DefaultKubernetesCl
     }
   }
 
-  def newTestJobConf(): TestAppConf = {
-    new TestAppConf()
+  def newSparkAppConf(): SparkAppConf = {
+    new SparkAppConf()
       .set("spark.master", s"k8s://${kubernetesClient.getMasterUrl}")
       .set("spark.kubernetes.namespace", namespace)
       .set("spark.kubernetes.driver.docker.image",
         System.getProperty("spark.docker.test.driverImage", "spark-driver:latest"))
       .set("spark.kubernetes.executor.docker.image",
         System.getProperty("spark.docker.test.executorImage", "spark-executor:latest"))
-      .setJars(Seq(KubernetesSuite.HELPER_JAR_FILE.getAbsolutePath))
       .set("spark.executor.memory", "500m")
       .set("spark.executor.cores", "1")
       .set("spark.executors.instances", "1")
@@ -64,5 +67,44 @@ private[spark] class KubernetesTestComponents(defaultClient: DefaultKubernetesCl
       .set("spark.ui.enabled", "true")
       .set("spark.testing", "false")
       .set("spark.kubernetes.submission.waitAppCompletion", "false")
+  }
+}
+
+private[spark] class SparkAppConf {
+
+  private val map = mutable.Map[String, String]()
+
+  def set(key:String, value: String): SparkAppConf = {
+    map.put(key, value)
+    this
+  }
+
+  def get(key: String): String = map.getOrElse(key, "")
+
+  def setJars(jars: Seq[String]) = set("spark.jars", jars.mkString(","))
+
+  override def toString: String = map.toString
+
+  def toStringArray: Iterable[String] = map.toList.flatMap(t => List("--conf", s"${t._1}=${t._2}"))
+}
+
+private[spark] case class SparkAppArguments(
+    mainAppResource: String,
+    mainClass: String)
+
+private[spark] object SparkAppLauncher extends Logging {
+
+  private val SPARK_SUBMIT_EXECUTABLE_DEST = Paths.get(SPARK_DISTRO_PATH.toFile.getAbsolutePath,
+      "bin", "spark-submit").toFile
+
+  def launch(appArguments: SparkAppArguments, appConf: SparkAppConf, timeoutSecs: Int): Unit = {
+    logInfo(s"Launching a spark app with arguments $appArguments and conf $appConf")
+    val commandLine = Array(SPARK_SUBMIT_EXECUTABLE_DEST.getAbsolutePath,
+        "--deploy-mode", "cluster",
+        "--class", appArguments.mainClass,
+        "--master", appConf.get("spark.master")
+      ) ++ appConf.toStringArray :+ appArguments.mainAppResource
+    logInfo(s"Launching a spark app with command line: ${commandLine.mkString(" ")}")
+    ProcessUtils.executeProcess(commandLine, timeoutSecs)
   }
 }
