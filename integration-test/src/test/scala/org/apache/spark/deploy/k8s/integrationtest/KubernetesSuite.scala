@@ -37,13 +37,10 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   private val APP_LOCATOR_LABEL = UUID.randomUUID().toString.replaceAll("-", "")
   private var kubernetesTestComponents: KubernetesTestComponents = _
   private var testAppConf: TestAppConf = _
-  private var staticAssetServerLauncher: StaticAssetServerLauncher = _
 
   override def beforeAll(): Unit = {
     testBackend.initialize()
     kubernetesTestComponents = new KubernetesTestComponents(testBackend.getKubernetesClient)
-    staticAssetServerLauncher = new StaticAssetServerLauncher(
-      kubernetesTestComponents.kubernetesClient.inNamespace(kubernetesTestComponents.namespace))
   }
 
   override def afterAll(): Unit = {
@@ -67,16 +64,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
     testAppConf.setJars(Seq(CONTAINER_LOCAL_HELPER_JAR_PATH))
     runSparkPiAndVerifyCompletion(CONTAINER_LOCAL_MAIN_APP_RESOURCE)
-  }
-
-  test("Use remote resources without the resource staging server.") {
-    assume(testBackend.name == MINIKUBE_TEST_BACKEND)
-    val assetServerUri = staticAssetServerLauncher.launchStaticAssetServer()
-    testAppConf.setJars(Seq(
-      s"$assetServerUri/${EXAMPLES_JAR_FILE.getName}",
-      s"$assetServerUri/${HELPER_JAR_FILE.getName}"
-    ))
-    runSparkPiAndVerifyCompletion()
   }
 
   test("Submit small local files without the resource staging server.") {
