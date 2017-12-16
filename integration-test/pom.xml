@@ -107,7 +107,7 @@
         <version>1.4.0</version>
         <executions>
           <execution>
-            <id>rename-spark-distro-output-dir</id>
+            <id>unpack-spark-distro</id>
             <phase>pre-integration-test</phase>
             <goals>
               <goal>exec</goal>
@@ -117,7 +117,7 @@
               <executable>/bin/sh</executable>
               <arguments>
                 <argument>-c</argument>
-                <argument>mkdir spark-distro-unpacked; cd spark-distro-unpacked; tar xfz ${spark-distro-tgz}; mv * ../docker</argument>
+                <argument>mkdir spark-distro-tmp; cd spark-distro-tmp; tar xfz ${spark-distro-tgz}; mv * ../spark-distro; cd ..; rm -rf spark-distro-tmp</argument>
               </arguments>
             </configuration>
           </execution>
@@ -134,7 +134,7 @@
               <goal>copy-resources</goal>
             </goals>
             <configuration>
-              <outputDirectory>${project.build.directory}/docker/dockerfiles</outputDirectory>
+              <outputDirectory>${project.build.directory}/spark-distro/dockerfiles</outputDirectory>
               <resources>
                 <resource>
                   <directory>src/main/docker</directory>

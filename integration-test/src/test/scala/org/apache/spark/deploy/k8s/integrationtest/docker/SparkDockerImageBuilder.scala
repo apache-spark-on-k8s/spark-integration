@@ -29,7 +29,7 @@ import org.apache.spark.deploy.k8s.integrationtest.Logging
 private[spark] class SparkDockerImageBuilder
   (private val dockerEnv: Map[String, String]) extends Logging{
 
-  private val DOCKER_BUILD_PATH = Paths.get("target", "docker")
+  private val DOCKER_BUILD_PATH = Paths.get("target", "spark-distro")
   // Dockerfile paths must be relative to the build path.
   private val BASE_DOCKER_FILE = "dockerfiles/spark-base/Dockerfile"
   private val DRIVER_DOCKER_FILE = "dockerfiles/driver/Dockerfile"
@@ -73,5 +73,6 @@ private[spark] class SparkDockerImageBuilder
       name,
       dockerFile,
       new LoggingBuildHandler())
+    logInfo(s"Built $name docker image")
   }
 }
