@@ -20,7 +20,7 @@ import java.nio.file.Paths
 import java.util.UUID
 
 import io.fabric8.kubernetes.client.DefaultKubernetesClient
-import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
+import org.scalatest.concurrent.Eventually
 import scala.collection.mutable
 import scala.collection.JavaConverters._
 

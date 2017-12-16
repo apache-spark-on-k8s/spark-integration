@@ -20,8 +20,7 @@ package org.apache.spark.deploy.k8s.integrationtest.backend
 import io.fabric8.kubernetes.client.DefaultKubernetesClient
 
 import org.apache.spark.deploy.k8s.integrationtest.backend.GCE.GCETestBackend
-import org.apache.spark.deploy.k8s.integrationtest.backend.minikube.{Minikube, MinikubeTestBackend}
-import org.apache.spark.deploy.k8s.integrationtest.docker.SparkDockerImageBuilder
+import org.apache.spark.deploy.k8s.integrationtest.backend.minikube.MinikubeTestBackend
 
 private[spark] trait IntegrationTestBackend {
   def name(): String

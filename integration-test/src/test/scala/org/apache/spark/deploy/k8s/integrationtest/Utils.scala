@@ -16,7 +16,7 @@
  */
 package org.apache.spark.deploy.k8s.integrationtest
 
-import java.io.{Closeable, InputStream, IOException, OutputStream}
+import java.io.Closeable
 
 object Utils {
 

@@ -16,18 +16,15 @@
  */
 package org.apache.spark.deploy.k8s.integrationtest
 
-import java.io.{File, FileOutputStream}
+import java.io.File
 import java.nio.file.Paths
-import java.util.{Properties, UUID}
+import java.util.UUID
 import java.util.regex.Pattern
 
-import com.google.common.base.Charsets
 import com.google.common.io.{Files, PatternFilenameFilter}
-import io.fabric8.kubernetes.client.internal.readiness.Readiness
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FunSuite}
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Minutes, Seconds, Span}
-import scala.collection.JavaConverters._
 
 import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackendFactory
 import org.apache.spark.deploy.k8s.integrationtest.constants.MINIKUBE_TEST_BACKEND
@@ -118,7 +115,7 @@ private[spark] object KubernetesSuite {
     "examples", "jars")
     .toFile
     .listFiles(new PatternFilenameFilter(Pattern.compile("^spark-examples_.*\\.jar$")))(0)
-  val CONTAINER_LOCAL_SPARK_DISTRO_EXAMPLES_JAR: String = s"local:///opt/spark/examples/" +
+  val CONTAINER_LOCAL_SPARK_DISTRO_EXAMPLES_JAR: String = s"local:///opt/spark/examples/jars/" +
     s"${SPARK_DISTRO_EXAMPLES_JAR_FILE.getName}"
   val SPARK_PI_MAIN_CLASS: String = "org.apache.spark.examples.SparkPi"
 
