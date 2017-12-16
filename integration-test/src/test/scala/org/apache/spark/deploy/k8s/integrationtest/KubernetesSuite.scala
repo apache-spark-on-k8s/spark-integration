@@ -127,49 +127,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       }
     }
   }
-
-  private def createShuffleServiceDaemonSet(): Unit = {
-    val ds = kubernetesTestComponents.kubernetesClient.extensions().daemonSets()
-      .createNew()
-        .withNewMetadata()
-        .withName("shuffle")
-      .endMetadata()
-      .withNewSpec()
-        .withNewTemplate()
-          .withNewMetadata()
-            .withLabels(Map("app" -> "spark-shuffle-service").asJava)
-          .endMetadata()
-          .withNewSpec()
-            .addNewVolume()
-              .withName("shuffle-dir")
-              .withNewHostPath()
-                .withPath("/tmp")
-              .endHostPath()
-            .endVolume()
-            .addNewContainer()
-              .withName("shuffle")
-              .withImage("spark-shuffle:latest")
-              .withImagePullPolicy("IfNotPresent")
-              .addNewVolumeMount()
-                .withName("shuffle-dir")
-                .withMountPath("/tmp")
-              .endVolumeMount()
-            .endContainer()
-          .endSpec()
-        .endTemplate()
-      .endSpec()
-      .done()
-
-    // wait for daemonset to become available.
-    Eventually.eventually(TIMEOUT, INTERVAL) {
-      val pods = kubernetesTestComponents.kubernetesClient.pods()
-        .withLabel("app", "spark-shuffle-service").list().getItems
-
-      if (pods.size() == 0 || !Readiness.isReady(pods.get(0))) {
-        throw ShuffleNotReadyException
-      }
-    }
-  }
 }
 
 private[spark] object KubernetesSuite {
