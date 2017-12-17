@@ -30,6 +30,7 @@
     <scala.binary.version>2.11</scala.binary.version>
     <sbt.project.name>kubernetes-integration-tests</sbt.project.name>
     <spark-distro-tgz>YOUR-SPARK-DISTRO-TARBALL-HERE</spark-distro-tgz>
+    <spark-dockerfiles-dir>YOUR-DOCKERFILES-DIR-HERE</spark-dockerfiles-dir>
   </properties>
   <packaging>jar</packaging>
   <name>Spark Project Kubernetes Integration Tests</name>
@@ -121,6 +122,38 @@
               </arguments>
             </configuration>
           </execution>
+          <execution>
+            <!-- TODO: Remove this hack once the upstream is fixed -->
+            <id>copy-dockerfiles-if-missing</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <workingDirectory>${project.build.directory}/spark-distro</workingDirectory>
+              <executable>/bin/sh</executable>
+              <arguments>
+                <argument>-c</argument>
+                <argument>test -d dockerfiles || cp -pr ${spark-dockerfiles-dir} dockerfiles</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <!-- TODO: Remove this hack once the upstream is fixed -->
+            <id>set-exec-bit-on-docker-entrypoint-sh</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <workingDirectory>${project.build.directory}/spark-distro/dockerfiles</workingDirectory>
+              <executable>/bin/chmod</executable>
+              <arguments>
+                <argument>+x</argument>
+                <argument>spark-base/entrypoint.sh</argument>
+              </arguments>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -156,8 +189,7 @@
       </plugin>
       <plugin>
         <!-- Triggers scalatest plugin in the integration-test phase instead of
-             the test phase, so that test jobs are copied over beforehand.
-             See copy-test-spark-jobs execution of maven-dependency-plugin above. -->
+             the test phase. -->
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest-maven-plugin</artifactId>
         <executions>
