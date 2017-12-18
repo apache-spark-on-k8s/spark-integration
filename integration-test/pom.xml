@@ -31,6 +31,7 @@
     <sbt.project.name>kubernetes-integration-tests</sbt.project.name>
     <spark-distro-tgz>YOUR-SPARK-DISTRO-TARBALL-HERE</spark-distro-tgz>
     <spark-dockerfiles-dir>YOUR-DOCKERFILES-DIR-HERE</spark-dockerfiles-dir>
+    <test.exclude.tags></test.exclude.tags>
   </properties>
   <packaging>jar</packaging>
   <name>Spark Project Kubernetes Integration Tests</name>
@@ -85,6 +86,12 @@
       <version>2.2.6</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>1.7.24</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -118,7 +125,7 @@
               <executable>/bin/sh</executable>
               <arguments>
                 <argument>-c</argument>
-                <argument>mkdir spark-distro-tmp; cd spark-distro-tmp; tar xfz ${spark-distro-tgz}; mv * ../spark-distro; cd ..; rm -rf spark-distro-tmp</argument>
+                <argument>rm -rf spark-distro; mkdir spark-distro-tmp; cd spark-distro-tmp; tar xfz ${spark-distro-tgz}; mv * ../spark-distro; cd ..; rm -rf spark-distro-tmp</argument>
               </arguments>
             </configuration>
           </execution>
@@ -139,7 +146,7 @@
             </configuration>
           </execution>
           <execution>
-            <!-- TODO: Remove this hack once the upstream is fixed -->
+            <!-- TODO: Remove this hack once upstream is fixed by SPARK-22777 -->
             <id>set-exec-bit-on-docker-entrypoint-sh</id>
             <phase>pre-integration-test</phase>
             <goals>
@@ -192,6 +199,19 @@
              the test phase. -->
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest-maven-plugin</artifactId>
+        <version>1.0</version>
+        <configuration>
+          <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+          <junitxml>.</junitxml>
+          <filereports>SparkTestSuite.txt</filereports>
+          <argLine>-ea -Xmx3g -XX:ReservedCodeCacheSize=512m ${extraScalaTestArgs}</argLine>
+          <stderr/>
+          <systemProperties>
+            <log4j.configuration>file:src/test/resources/log4j.properties</log4j.configuration>
+            <java.awt.headless>true</java.awt.headless>
+          </systemProperties>
+          <tagsToExclude>${test.exclude.tags}</tagsToExclude>
+        </configuration>
         <executions>
           <execution>
             <id>test</id>
