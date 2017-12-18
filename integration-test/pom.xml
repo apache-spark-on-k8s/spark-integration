@@ -23,11 +23,20 @@
   <version>0.1-SNAPSHOT</version>
   <properties>
     <commons-lang3.version>3.5</commons-lang3.version>
+    <commons-logging.version>1.1.1</commons-logging.version>
+    <docker-client.version>5.0.2</docker-client.version>
+    <download-maven-plugin.version>1.3.0</download-maven-plugin.version>
+    <exec-maven-plugin.version>1.4.0</exec-maven-plugin.version>
+    <guava.version>18.0</guava.version>
     <jsr305.version>1.3.9</jsr305.version>
-    <kubernetes.client.version>3.0.0</kubernetes.client.version>
+    <kubernetes-client.version>3.0.0</kubernetes-client.version>
     <log4j.version>1.2.17</log4j.version>
     <scala.version>2.11.8</scala.version>
     <scala.binary.version>2.11</scala.binary.version>
+    <scala-maven-plugin.version>3.2.2</scala-maven-plugin.version>
+    <scalatest.version>2.2.6</scalatest.version>
+    <scalatest-maven-plugin.version>1.0</scalatest-maven-plugin.version>
+    <slf4j-log4j12.version>1.7.24</slf4j-log4j12.version>
     <sbt.project.name>kubernetes-integration-tests</sbt.project.name>
     <spark-distro-tgz>YOUR-SPARK-DISTRO-TARBALL-HERE</spark-distro-tgz>
     <spark-dockerfiles-dir>YOUR-DOCKERFILES-DIR-HERE</spark-dockerfiles-dir>
@@ -40,7 +49,7 @@
     <dependency>
       <groupId>commons-logging</groupId>
       <artifactId>commons-logging</artifactId>
-      <version>1.1.1</version>
+      <version>${commons-logging.version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
@@ -52,18 +61,18 @@
       <artifactId>guava</artifactId>
       <scope>test</scope>
       <!-- For compatibility with Docker client. Should be fine since this is just for tests.-->
-      <version>18.0</version>
+      <version>${guava.version}</version>
     </dependency>
     <dependency>
       <groupId>com.spotify</groupId>
       <artifactId>docker-client</artifactId>
-      <version>5.0.2</version>
+      <version>${docker-client.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-client</artifactId>
-      <version>${kubernetes.client.version}</version>
+      <version>${kubernetes-client.version}</version>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
@@ -83,13 +92,13 @@
     <dependency>
       <groupId>org.scalatest</groupId>
       <artifactId>scalatest_${scala.binary.version}</artifactId>
-      <version>2.2.6</version>
+      <version>${scalatest.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
-      <version>1.7.24</version>
+      <version>${slf4j-log4j12.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -99,7 +108,7 @@
       <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
-        <version>3.2.2</version>
+        <version>${scala-maven-plugin.version}</version>
         <executions>
           <execution>
             <goals>
@@ -112,7 +121,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <version>1.4.0</version>
+        <version>${exec-maven-plugin.version}</version>
         <executions>
           <execution>
             <id>unpack-spark-distro</id>
@@ -166,7 +175,7 @@
       <plugin>
         <groupId>com.googlecode.maven-download-plugin</groupId>
         <artifactId>download-maven-plugin</artifactId>
-        <version>1.3.0</version>
+        <version>${download-maven-plugin.version}</version>
         <executions>
           <execution>
             <id>download-minikube-linux</id>
@@ -199,7 +208,7 @@
              the test phase. -->
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest-maven-plugin</artifactId>
-        <version>1.0</version>
+        <version>${scalatest-maven-plugin.version}</version>
         <configuration>
           <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
           <junitxml>.</junitxml>
