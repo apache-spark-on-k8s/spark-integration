@@ -39,6 +39,9 @@ private[spark] object Minikube extends Logging {
 
   private val MINIKUBE_STARTUP_TIMEOUT_SECONDS = 60
 
+  // NOTE: This and the following methods are synchronized to prevent deleteMinikube from
+  // destroying the minikube VM while other methods try to use the VM.
+  // Such a race condition can corrupt the VM or some VM provisioning tools like VirtualBox.
   def startMinikube(): Unit = synchronized {
     assert(MINIKUBE_EXECUTABLE_DEST.exists(), EXPECTED_DOWNLOADED_MINIKUBE_MESSAGE)
     if (getMinikubeStatus != MinikubeStatus.RUNNING) {

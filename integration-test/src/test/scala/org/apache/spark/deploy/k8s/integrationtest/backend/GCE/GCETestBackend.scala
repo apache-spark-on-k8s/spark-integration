@@ -18,6 +18,7 @@ package org.apache.spark.deploy.k8s.integrationtest.backend.GCE
 
 import io.fabric8.kubernetes.client.{ConfigBuilder, DefaultKubernetesClient}
 
+import org.apache.spark.deploy.k8s.integrationtest.Utils
 import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackend
 import org.apache.spark.deploy.k8s.integrationtest.constants.GCE_TEST_BACKEND
 
@@ -25,10 +26,11 @@ private[spark] class GCETestBackend(val master: String) extends IntegrationTestB
   private var defaultClient: DefaultKubernetesClient = _
 
   override def initialize(): Unit = {
-    var k8ConfBuilder = new ConfigBuilder()
+    val k8sConf = new ConfigBuilder()
       .withApiVersion("v1")
-      .withMasterUrl(master.replaceFirst("k8s://", ""))
-    defaultClient = new DefaultKubernetesClient(k8ConfBuilder.build)
+      .withMasterUrl(Utils.checkAndGetK8sMasterUrl(master).replaceFirst("k8s://", ""))
+      .build()
+    defaultClient = new DefaultKubernetesClient(k8sConf)
   }
 
   override def getKubernetesClient(): DefaultKubernetesClient = {

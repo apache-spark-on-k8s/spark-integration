@@ -16,10 +16,10 @@
  */
 package org.apache.spark.deploy.k8s.integrationtest
 
-import java.io.{BufferedReader, InputStreamReader}
 import java.util.concurrent.TimeUnit
 
 import scala.collection.mutable.ArrayBuffer
+import scala.io.Source
 
 object ProcessUtils extends Logging {
   /**
@@ -32,17 +32,13 @@ object ProcessUtils extends Logging {
     val proc = pb.start()
     val outputLines = new ArrayBuffer[String]
 
-    Utils.tryWithResource(new InputStreamReader(proc.getInputStream)) { procOutput =>
-      Utils.tryWithResource(new BufferedReader(procOutput)) { (bufferedOutput: BufferedReader) =>
-        var line: String = null
-        do {
-          line = bufferedOutput.readLine()
-          if (line != null) {
-            logInfo(line)
-            outputLines += line
-          }
-        } while (line != null)
+    Utils.tryWithResource(Source.fromInputStream(proc.getInputStream, "UTF-8")) { output =>
+      for (line <- output.getLines) {
+        logInfo(line)
+        outputLines += line
       }
+    }{
+      output => output.close()
     }
     assert(proc.waitFor(timeout, TimeUnit.SECONDS),
       s"Timed out while executing ${fullCommand.mkString(" ")}")

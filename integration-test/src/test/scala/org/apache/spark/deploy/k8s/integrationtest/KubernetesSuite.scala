@@ -21,7 +21,7 @@ import java.nio.file.Paths
 import java.util.UUID
 import java.util.regex.Pattern
 
-import com.google.common.io.{Files, PatternFilenameFilter}
+import com.google.common.io.PatternFilenameFilter
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FunSuite}
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Minutes, Seconds, Span}
@@ -31,6 +31,7 @@ import org.apache.spark.deploy.k8s.integrationtest.constants.MINIKUBE_TEST_BACKE
 import org.apache.spark.deploy.k8s.integrationtest.constants.SPARK_DISTRO_PATH
 
 private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll with BeforeAndAfter {
+
   import KubernetesSuite._
   private val testBackend = IntegrationTestBackendFactory.getTestBackend()
   private val APP_LOCATOR_LABEL = UUID.randomUUID().toString.replaceAll("-", "")
@@ -48,8 +49,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
   before {
     sparkAppConf = kubernetesTestComponents.newSparkAppConf()
-      .set("spark.kubernetes.initcontainer.docker.image", "spark-init:latest")
-      .set("spark.kubernetes.driver.docker.image", "spark-driver:latest")
       .set("spark.kubernetes.driver.label.spark-app-locator", APP_LOCATOR_LABEL)
     kubernetesTestComponents.createNamespace()
   }

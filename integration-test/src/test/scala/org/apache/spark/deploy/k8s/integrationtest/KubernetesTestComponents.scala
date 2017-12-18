@@ -19,10 +19,11 @@ package org.apache.spark.deploy.k8s.integrationtest
 import java.nio.file.Paths
 import java.util.UUID
 
-import io.fabric8.kubernetes.client.DefaultKubernetesClient
-import org.scalatest.concurrent.Eventually
 import scala.collection.mutable
 import scala.collection.JavaConverters._
+
+import io.fabric8.kubernetes.client.DefaultKubernetesClient
+import org.scalatest.concurrent.Eventually
 
 import org.apache.spark.deploy.k8s.integrationtest.constants.SPARK_DISTRO_PATH
 
@@ -56,6 +57,8 @@ private[spark] class KubernetesTestComponents(defaultClient: DefaultKubernetesCl
     new SparkAppConf()
       .set("spark.master", s"k8s://${kubernetesClient.getMasterUrl}")
       .set("spark.kubernetes.namespace", namespace)
+      // TODO: apache/spark#19995 is changing docker.image to container.image in these properties.
+      // Update them once the PR is merged.
       .set("spark.kubernetes.driver.docker.image",
         System.getProperty("spark.docker.test.driverImage", "spark-driver:latest"))
       .set("spark.kubernetes.executor.docker.image",

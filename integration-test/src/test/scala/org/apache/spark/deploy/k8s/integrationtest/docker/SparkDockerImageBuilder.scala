@@ -42,20 +42,20 @@ private[spark] class SparkDockerImageBuilder
 
   private val originalDockerUri = URI.create(dockerHost)
   private val httpsDockerUri = new URIBuilder()
-      .setHost(originalDockerUri.getHost)
-      .setPort(originalDockerUri.getPort)
-      .setScheme("https")
-      .build()
+    .setHost(originalDockerUri.getHost)
+    .setPort(originalDockerUri.getPort)
+    .setScheme("https")
+    .build()
 
   private val dockerCerts = dockerEnv.getOrElse("DOCKER_CERT_PATH",
       throw new IllegalStateException("DOCKER_CERT_PATH env not found."))
 
   private val dockerClient = new DefaultDockerClient.Builder()
     .uri(httpsDockerUri)
-    .dockerCertificates(DockerCertificates
-        .builder()
-        .dockerCertPath(Paths.get(dockerCerts))
-        .build().get())
+    .dockerCertificates(DockerCertificates.builder()
+      .dockerCertPath(Paths.get(dockerCerts))
+      .build()
+      .get())
     .build()
 
   def buildSparkDockerImages(): Unit = {
