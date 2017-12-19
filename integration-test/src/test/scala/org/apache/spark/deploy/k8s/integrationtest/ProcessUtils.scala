@@ -31,7 +31,6 @@ object ProcessUtils extends Logging {
     pb.redirectErrorStream(true)
     val proc = pb.start()
     val outputLines = new ArrayBuffer[String]
-
     Utils.tryWithResource(proc.getInputStream)(
       Source.fromInputStream(_, "UTF-8").getLines().foreach { line =>
         logInfo(line)
