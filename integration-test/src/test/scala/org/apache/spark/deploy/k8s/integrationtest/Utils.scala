@@ -26,11 +26,6 @@ object Utils extends Logging {
     try f.apply(resource) finally resource.close()
   }
 
-  def tryWithResource[R, T](createResource: => R)(f: R => T)(closeResource: R => T): T = {
-    val resource = createResource
-    try f.apply(resource) finally closeResource(resource)
-  }
-
   def checkAndGetK8sMasterUrl(rawMasterURL: String): String = {
     require(rawMasterURL.startsWith("k8s://"),
       "Kubernetes master URL must start with k8s://.")

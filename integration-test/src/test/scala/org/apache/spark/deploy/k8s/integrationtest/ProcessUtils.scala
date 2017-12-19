@@ -32,14 +32,11 @@ object ProcessUtils extends Logging {
     val proc = pb.start()
     val outputLines = new ArrayBuffer[String]
 
-    Utils.tryWithResource(Source.fromInputStream(proc.getInputStream, "UTF-8")) { output =>
-      for (line <- output.getLines) {
+    Utils.tryWithResource(proc.getInputStream)(
+      Source.fromInputStream(_, "UTF-8").getLines().foreach { line =>
         logInfo(line)
         outputLines += line
-      }
-    }{
-      output => output.close()
-    }
+      })
     assert(proc.waitFor(timeout, TimeUnit.SECONDS),
       s"Timed out while executing ${fullCommand.mkString(" ")}")
     assert(proc.exitValue == 0, s"Failed to execute ${fullCommand.mkString(" ")}")
