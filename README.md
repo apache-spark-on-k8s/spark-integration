@@ -10,8 +10,26 @@ is subject to change.
 
 Note that currently the integration tests only run with Java 8.
 
-Running the integration tests requires a Spark distribution tarball. It also
-needs a local path to the directory that contains `Dockerfile`s.
+Running the integration tests requires a Spark distribution package tarball that
+contains Spark jars, submission clients, etc. You can download a tarball from
+http://spark.apache.org/downloads.html. Or, you can create a distribution from
+source code using `make-distribution.sh`. For example:
+
+```
+$ git clone git@github.com:apache/spark.git
+$ cd spark
+$ ./dev/make-distribution.sh --tgz \
+     -Phadoop-2.7 -Pkubernetes -Pkinesis-asl -Phive -Phive-thriftserver
+```
+
+The above command will create a tarball like spark-2.3.0-SNAPSHOT-bin.tgz in the
+top-level dir. For more details, see the related section in
+[building-spark.md](https://github.com/apache/spark/blob/master/docs/building-spark.md#building-a-runnable-distribution)
+
+
+The integration tests also need a local path to the directory that
+contains `Dockerfile`s. In the main spark repo, the path is
+`/spark/resource-managers/kubernetes/docker/src/main/dockerfiles`.
  
 Once you prepare the inputs, the integration tests can be executed with Maven or
 your IDE. Note that when running tests from an IDE, the `pre-integration-test`
@@ -23,8 +41,8 @@ With Maven, the integration test can be run using the following command:
 
 ```
 $ mvn clean integration-test  \
-    -Dspark-distro-tgz=/tmp/spark-2.3.0-SNAPSHOT-bin-20171216-0c8fca4608.tgz  \
-    -Dspark-dockerfiles-dir=.../spark/resource-managers/kubernetes/docker/src/main/dockerfiles
+    -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
+    -Dspark-dockerfiles-dir=spark/resource-managers/kubernetes/docker/src/main/dockerfiles
 ```
 
 # Running against an arbitrary cluster
@@ -32,8 +50,8 @@ $ mvn clean integration-test  \
 In order to run against any cluster, use the following:
 ```sh
 $ mvn clean integration-test  \
-    -Dspark-distro-tgz=/tmp/spark-2.3.0-SNAPSHOT-bin-20171216-0c8fca4608.tgz  \
-    -Dspark-dockerfiles-dir=.../spark/resource-managers/kubernetes/docker/src/main/dockerfiles
+    -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
+    -Dspark-dockerfiles-dir=spark/resource-managers/kubernetes/docker/src/main/dockerfiles
     -DextraScalaTestArgs="-Dspark.kubernetes.test.master=k8s://https://<master> -Dspark.docker.test.driverImage=<driver-image> -Dspark.docker.test.executorImage=<executor-image>"
 ```
 
@@ -48,8 +66,8 @@ property `spark.docker.test.persistMinikube` to the test process:
 
 ```
 $ mvn clean integration-test  \
-    -Dspark-distro-tgz=/tmp/spark-2.3.0-SNAPSHOT-bin-20171216-0c8fca4608.tgz  \
-    -Dspark-dockerfiles-dir=.../spark/resource-managers/kubernetes/docker/src/main/dockerfiles
+    -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
+    -Dspark-dockerfiles-dir=spark/resource-managers/kubernetes/docker/src/main/dockerfiles
     -DextraScalaTestArgs=-Dspark.docker.test.persistMinikube=true
 ```
 
@@ -66,7 +84,7 @@ is an example:
 
 ```
 $ mvn clean integration-test  \
-    -Dspark-distro-tgz=/tmp/spark-2.3.0-SNAPSHOT-bin-20171216-0c8fca4608.tgz  \
-    -Dspark-dockerfiles-dir=.../spark/resource-managers/kubernetes/docker/src/main/dockerfiles
+    -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
+    -Dspark-dockerfiles-dir=spark/resource-managers/kubernetes/docker/src/main/dockerfiles
     "-DextraScalaTestArgs=-Dspark.docker.test.persistMinikube=true -Dspark.docker.test.skipBuildImages=true"
 ```
