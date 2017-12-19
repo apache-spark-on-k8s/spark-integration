@@ -11,7 +11,7 @@ is subject to change.
 Note that currently the integration tests only run with Java 8.
 
 Running the integration tests requires a Spark distribution tarball. It also
-needs a local path to the directory that contains `Dockerimage` files.
+needs a local path to the directory that contains `Dockerfile`s.
  
 Once you prepare the inputs, the integration tests can be executed with Maven or
 your IDE. Note that when running tests from an IDE, the `pre-integration-test`
