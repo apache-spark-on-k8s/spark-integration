@@ -58,14 +58,10 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   }
 
   test("Run SparkPi with no resources") {
-    assume(testBackend.name == MINIKUBE_TEST_BACKEND)
-
     runSparkPiAndVerifyCompletion()
   }
 
   test("Run SparkPi with a very long application name.") {
-    assume(testBackend.name == MINIKUBE_TEST_BACKEND)
-
     sparkAppConf.set("spark.app.name", "long" * 40)
     runSparkPiAndVerifyCompletion()
   }
