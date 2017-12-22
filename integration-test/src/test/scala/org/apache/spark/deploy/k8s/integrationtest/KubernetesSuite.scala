@@ -77,7 +77,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       .set("spark.kubernetes.driver.label.foo", "foo-value")
       .set("spark.kubernetes.driver.label.bar", "bar-value")
     runSparkPiAndVerifyCompletion(driverPodChecker = (driverPod: Pod) => {
-      doBaseDriverPodCheck(driverPod)
+      doBasicDriverPodCheck(driverPod)
       assert(driverPod.getMetadata.getLabels.get("foo") === "foo-value")
       assert(driverPod.getMetadata.getLabels.get("bar") === "bar-value")
     })
@@ -88,7 +88,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       .set("spark.kubernetes.driver.annotation.foo", "foo-value")
       .set("spark.kubernetes.driver.annotation.bar", "bar-value")
     runSparkPiAndVerifyCompletion(driverPodChecker = (driverPod: Pod) => {
-      doBaseDriverPodCheck(driverPod)
+      doBasicDriverPodCheck(driverPod)
       assert(driverPod.getMetadata.getAnnotations.get("foo") === "foo-value")
       assert(driverPod.getMetadata.getAnnotations.get("bar") === "bar-value")
     })
@@ -99,7 +99,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       .set("spark.kubernetes.driverEnv.ENV1", "VALUE1")
       .set("spark.kubernetes.driverEnv.ENV2", "VALUE2")
     runSparkPiAndVerifyCompletion(driverPodChecker = (driverPod: Pod) => {
-      doBaseDriverPodCheck(driverPod)
+      doBasicDriverPodCheck(driverPod)
       val driverContainer = driverPod.getSpec.getContainers.get(0)
       assert(driverContainer.getEnv.size() == 2)
       assert(driverContainer.getEnv.get(0).getName === "ENV1")
@@ -111,7 +111,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
   private def runSparkPiAndVerifyCompletion(
       appResource: String = CONTAINER_LOCAL_SPARK_DISTRO_EXAMPLES_JAR,
-      driverPodChecker: Pod => Unit = doBaseDriverPodCheck): Unit = {
+      driverPodChecker: Pod => Unit = doBasicDriverPodCheck): Unit = {
     runSparkApplicationAndVerifyCompletion(
       appResource,
       SPARK_PI_MAIN_CLASS,
@@ -148,7 +148,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     }
   }
 
-  private def doBaseDriverPodCheck(driverPod: Pod): Unit = {
+  private def doBasicDriverPodCheck(driverPod: Pod): Unit = {
     assert(driverPod.getMetadata.getLabels.get("spark-role") === "driver")
   }
 }
