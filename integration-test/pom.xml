@@ -139,22 +139,6 @@
               </arguments>
             </configuration>
           </execution>
-          <execution>
-            <!-- TODO: Remove this hack once the upstream is fixed -->
-            <id>copy-dockerfiles-if-missing</id>
-            <phase>pre-integration-test</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <workingDirectory>${project.build.directory}/spark-distro</workingDirectory>
-              <executable>/bin/sh</executable>
-              <arguments>
-                <argument>-c</argument>
-                <argument>test -d dockerfiles || cp -pr ${spark-dockerfiles-dir} dockerfiles</argument>
-              </arguments>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
       <plugin>
