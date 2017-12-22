@@ -1,2 +1,5 @@
+.idea/
+integration-test/target/
 *.class
 *.log
+*.iml
