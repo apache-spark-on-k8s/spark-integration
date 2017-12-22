@@ -32,9 +32,10 @@ private[spark] class SparkDockerImageBuilder
 
   private val DOCKER_BUILD_PATH = SPARK_DISTRO_PATH
   // Dockerfile paths must be relative to the build path.
-  private val BASE_DOCKER_FILE = "dockerfiles/spark-base/Dockerfile"
-  private val DRIVER_DOCKER_FILE = "dockerfiles/driver/Dockerfile"
-  private val EXECUTOR_DOCKER_FILE = "dockerfiles/executor/Dockerfile"
+  private val DOCKERFILES_DIR = "kubernetes/dockerfiles/"
+  private val BASE_DOCKER_FILE = DOCKERFILES_DIR + "spark-base/Dockerfile"
+  private val DRIVER_DOCKER_FILE = DOCKERFILES_DIR + "driver/Dockerfile"
+  private val EXECUTOR_DOCKER_FILE = DOCKERFILES_DIR + "executor/Dockerfile"
   private val TIMEOUT = PatienceConfiguration.Timeout(Span(2, Minutes))
   private val INTERVAL = PatienceConfiguration.Interval(Span(2, Seconds))
   private val dockerHost = dockerEnv.getOrElse("DOCKER_HOST",

@@ -27,11 +27,7 @@ top-level dir. For more details, see the related section in
 [building-spark.md](https://github.com/apache/spark/blob/master/docs/building-spark.md#building-a-runnable-distribution)
 
 
-The integration tests also need a local path to the directory that
-contains `Dockerfile`s. In the main spark repo, the path is
-`/spark/resource-managers/kubernetes/docker/src/main/dockerfiles`.
- 
-Once you prepare the inputs, the integration tests can be executed with Maven or
+Once you prepare the tarball, the integration tests can be executed with Maven or
 your IDE. Note that when running tests from an IDE, the `pre-integration-test`
 phase must be run every time the Spark main code changes.  When running tests
 from the command line, the `pre-integration-test` phase should automatically be
@@ -41,8 +37,7 @@ With Maven, the integration test can be run using the following command:
 
 ```
 $ mvn clean integration-test  \
-    -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
-    -Dspark-dockerfiles-dir=spark/resource-managers/kubernetes/docker/src/main/dockerfiles
+    -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz
 ```
 
 # Running against an arbitrary cluster
@@ -51,7 +46,6 @@ In order to run against any cluster, use the following:
 ```sh
 $ mvn clean integration-test  \
     -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
-    -Dspark-dockerfiles-dir=spark/resource-managers/kubernetes/docker/src/main/dockerfiles
     -DextraScalaTestArgs="-Dspark.kubernetes.test.master=k8s://https://<master> -Dspark.docker.test.driverImage=<driver-image> -Dspark.docker.test.executorImage=<executor-image>"
 ```
 
@@ -67,7 +61,6 @@ property `spark.docker.test.persistMinikube` to the test process:
 ```
 $ mvn clean integration-test  \
     -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
-    -Dspark-dockerfiles-dir=spark/resource-managers/kubernetes/docker/src/main/dockerfiles
     -DextraScalaTestArgs=-Dspark.docker.test.persistMinikube=true
 ```
 
@@ -85,6 +78,5 @@ is an example:
 ```
 $ mvn clean integration-test  \
     -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
-    -Dspark-dockerfiles-dir=spark/resource-managers/kubernetes/docker/src/main/dockerfiles
     "-DextraScalaTestArgs=-Dspark.docker.test.persistMinikube=true -Dspark.docker.test.skipBuildImages=true"
 ```
