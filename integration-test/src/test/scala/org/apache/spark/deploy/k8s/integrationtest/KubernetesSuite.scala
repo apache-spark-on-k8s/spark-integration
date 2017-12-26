@@ -72,34 +72,20 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     runSparkPiAndVerifyCompletion()
   }
 
-  test("Run SparkPi with custom driver labels.") {
+  test("Run SparkPi with custom driver labels, annotations, and environment variables.") {
     sparkAppConf
-      .set("spark.kubernetes.driver.label.foo", "foo-value")
-      .set("spark.kubernetes.driver.label.bar", "bar-value")
-    runSparkPiAndVerifyCompletion(driverPodChecker = (driverPod: Pod) => {
-      doBasicDriverPodCheck(driverPod)
-      assert(driverPod.getMetadata.getLabels.get("foo") === "foo-value")
-      assert(driverPod.getMetadata.getLabels.get("bar") === "bar-value")
-    })
-  }
-
-  test("Run SparkPi with custom driver annotations.") {
-    sparkAppConf
-      .set("spark.kubernetes.driver.annotation.foo", "foo-value")
-      .set("spark.kubernetes.driver.annotation.bar", "bar-value")
-    runSparkPiAndVerifyCompletion(driverPodChecker = (driverPod: Pod) => {
-      doBasicDriverPodCheck(driverPod)
-      assert(driverPod.getMetadata.getAnnotations.get("foo") === "foo-value")
-      assert(driverPod.getMetadata.getAnnotations.get("bar") === "bar-value")
-    })
-  }
-
-  test("Run SparkPi with custom driver environment variables.") {
-    sparkAppConf
+      .set("spark.kubernetes.driver.label.label1", "label1-value")
+      .set("spark.kubernetes.driver.label.label2", "label2-value")
+      .set("spark.kubernetes.driver.annotation.annotation1", "annotation1-value")
+      .set("spark.kubernetes.driver.annotation.annotation2", "annotation2-value")
       .set("spark.kubernetes.driverEnv.ENV1", "VALUE1")
       .set("spark.kubernetes.driverEnv.ENV2", "VALUE2")
     runSparkPiAndVerifyCompletion(driverPodChecker = (driverPod: Pod) => {
       doBasicDriverPodCheck(driverPod)
+      assert(driverPod.getMetadata.getLabels.get("label1") === "label1-value")
+      assert(driverPod.getMetadata.getLabels.get("label2") === "label2-value")
+      assert(driverPod.getMetadata.getAnnotations.get("annotation1") === "annotation1-value")
+      assert(driverPod.getMetadata.getAnnotations.get("annotation2") === "annotation2-value")
       val driverContainer = driverPod.getSpec.getContainers.get(0)
       assert(driverContainer.getEnv.size() == 2)
       assert(driverContainer.getEnv.get(0).getName === "ENV1")
