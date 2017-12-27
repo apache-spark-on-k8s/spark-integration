@@ -72,17 +72,9 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     runSparkPiAndVerifyCompletion()
   }
 
-  test("Run SparkPi with custom driver pod name.") {
+  test("Run SparkPi with custom driver pod name, labels, annotations, and environment variables.") {
     sparkAppConf
       .set("spark.kubernetes.driver.pod.name", "spark-integration-spark-pi")
-    runSparkPiAndVerifyCompletion(driverPodChecker = (driverPod: Pod) => {
-      doBasicDriverPodCheck(driverPod)
-      assert(driverPod.getMetadata.getName === "spark-integration-spark-pi")
-    })
-  }
-
-  test("Run SparkPi with custom driver labels, annotations, and environment variables.") {
-    sparkAppConf
       .set("spark.kubernetes.driver.label.label1", "label1-value")
       .set("spark.kubernetes.driver.label.label2", "label2-value")
       .set("spark.kubernetes.driver.annotation.annotation1", "annotation1-value")
@@ -91,10 +83,13 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       .set("spark.kubernetes.driverEnv.ENV2", "VALUE2")
     runSparkPiAndVerifyCompletion(driverPodChecker = (driverPod: Pod) => {
       doBasicDriverPodCheck(driverPod)
+      assert(driverPod.getMetadata.getName === "spark-integration-spark-pi")
+
       assert(driverPod.getMetadata.getLabels.get("label1") === "label1-value")
       assert(driverPod.getMetadata.getLabels.get("label2") === "label2-value")
       assert(driverPod.getMetadata.getAnnotations.get("annotation1") === "annotation1-value")
       assert(driverPod.getMetadata.getAnnotations.get("annotation2") === "annotation2-value")
+
       val driverContainer = driverPod.getSpec.getContainers.get(0)
       assert(driverContainer.getEnv.size() == 2)
       assert(driverContainer.getEnv.get(0).getName === "ENV1")
