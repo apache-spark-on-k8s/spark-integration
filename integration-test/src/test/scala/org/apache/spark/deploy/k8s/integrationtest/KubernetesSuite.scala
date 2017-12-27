@@ -21,6 +21,8 @@ import java.nio.file.Paths
 import java.util.UUID
 import java.util.regex.Pattern
 
+import scala.collection.JavaConverters._
+
 import com.google.common.io.PatternFilenameFilter
 import io.fabric8.kubernetes.api.model.Pod
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FunSuite}
@@ -91,11 +93,15 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       assert(driverPod.getMetadata.getAnnotations.get("annotation2") === "annotation2-value")
 
       val driverContainer = driverPod.getSpec.getContainers.get(0)
-      assert(driverContainer.getEnv.size() == 2)
-      assert(driverContainer.getEnv.get(0).getName === "ENV1")
-      assert(driverContainer.getEnv.get(0).getValue === "VALUE1")
-      assert(driverContainer.getEnv.get(1).getName === "ENV2")
-      assert(driverContainer.getEnv.get(1).getValue === "VALUE2")
+      val envVars = driverContainer
+        .getEnv
+        .asScala
+        .map { env =>
+          (env.getName, env.getValue)
+        }
+        .toMap
+      assert(envVars("ENV1") === "VALUE1")
+      assert(envVars("ENV2") === "VALUE2")
     })
   }
 
