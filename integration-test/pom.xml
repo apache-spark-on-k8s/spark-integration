@@ -40,7 +40,6 @@
     <slf4j-log4j12.version>1.7.24</slf4j-log4j12.version>
     <sbt.project.name>kubernetes-integration-tests</sbt.project.name>
     <spark-distro-tgz>YOUR-SPARK-DISTRO-TARBALL-HERE</spark-distro-tgz>
-    <spark-dockerfiles-dir>YOUR-DOCKERFILES-DIR-HERE</spark-dockerfiles-dir>
     <test.exclude.tags></test.exclude.tags>
   </properties>
   <packaging>jar</packaging>
