@@ -21,7 +21,10 @@ import java.nio.file.Paths
 import java.util.UUID
 import java.util.regex.Pattern
 
+import scala.collection.JavaConverters._
+
 import com.google.common.io.PatternFilenameFilter
+import io.fabric8.kubernetes.api.model.Pod
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FunSuite}
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Minutes, Seconds, Span}
@@ -30,7 +33,6 @@ import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBacken
 import org.apache.spark.deploy.k8s.integrationtest.backend.minikube.MinikubeTestBackend
 import org.apache.spark.deploy.k8s.integrationtest.constants._
 import org.apache.spark.deploy.k8s.integrationtest.config._
-
 
 private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll with BeforeAndAfter {
 
@@ -73,20 +75,62 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     runSparkPiAndVerifyCompletion()
   }
 
+  test("Run SparkPi with a master URL without a scheme.") {
+    doMinikubeCheck
+    val url = kubernetesTestComponents.kubernetesClient.getMasterUrl
+    sparkAppConf.set("spark.master", s"k8s://${url.getHost}:${url.getPort}")
+    runSparkPiAndVerifyCompletion()
+  }
+
+  test("Run SparkPi with custom driver pod name, labels, annotations, and environment variables.") {
+    doMinikubeCheck
+    sparkAppConf
+      .set("spark.kubernetes.driver.pod.name", "spark-integration-spark-pi")
+      .set("spark.kubernetes.driver.label.label1", "label1-value")
+      .set("spark.kubernetes.driver.label.label2", "label2-value")
+      .set("spark.kubernetes.driver.annotation.annotation1", "annotation1-value")
+      .set("spark.kubernetes.driver.annotation.annotation2", "annotation2-value")
+      .set("spark.kubernetes.driverEnv.ENV1", "VALUE1")
+      .set("spark.kubernetes.driverEnv.ENV2", "VALUE2")
+    runSparkPiAndVerifyCompletion(driverPodChecker = (driverPod: Pod) => {
+      doBasicDriverPodCheck(driverPod)
+      assert(driverPod.getMetadata.getName === "spark-integration-spark-pi")
+
+      assert(driverPod.getMetadata.getLabels.get("label1") === "label1-value")
+      assert(driverPod.getMetadata.getLabels.get("label2") === "label2-value")
+      assert(driverPod.getMetadata.getAnnotations.get("annotation1") === "annotation1-value")
+      assert(driverPod.getMetadata.getAnnotations.get("annotation2") === "annotation2-value")
+
+      val driverContainer = driverPod.getSpec.getContainers.get(0)
+      val envVars = driverContainer
+        .getEnv
+        .asScala
+        .map { env =>
+          (env.getName, env.getValue)
+        }
+        .toMap
+      assert(envVars("ENV1") === "VALUE1")
+      assert(envVars("ENV2") === "VALUE2")
+    })
+  }
+
   private def runSparkPiAndVerifyCompletion(
-      appResource: String = CONTAINER_LOCAL_SPARK_DISTRO_EXAMPLES_JAR): Unit = {
+      appResource: String = CONTAINER_LOCAL_SPARK_DISTRO_EXAMPLES_JAR,
+      driverPodChecker: Pod => Unit = doBasicDriverPodCheck): Unit = {
     runSparkApplicationAndVerifyCompletion(
-        appResource,
-        SPARK_PI_MAIN_CLASS,
-        Seq("Pi is roughly 3"),
-        Array.empty[String])
+      appResource,
+      SPARK_PI_MAIN_CLASS,
+      Seq("Pi is roughly 3"),
+      Array.empty[String],
+      driverPodChecker)
   }
 
   private def runSparkApplicationAndVerifyCompletion(
       appResource: String,
       mainClass: String,
       expectedLogOnCompletion: Seq[String],
-      appArgs: Array[String]): Unit = {
+      appArgs: Array[String],
+      driverPodChecker: Pod => Unit): Unit = {
     val appArguments = SparkAppArguments(
       mainAppResource = appResource,
       mainClass = mainClass)
@@ -97,6 +141,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       .list()
       .getItems
       .get(0)
+    driverPodChecker(driverPod)
     Eventually.eventually(TIMEOUT, INTERVAL) {
       expectedLogOnCompletion.foreach { e =>
         assert(kubernetesTestComponents.kubernetesClient
@@ -111,6 +156,10 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     assume(testBackend == MinikubeTestBackend)
   }
   private def tagImage(image: String): String = s"$image:${testBackend.dockerImageTag()}"
+
+  private def doBasicDriverPodCheck(driverPod: Pod): Unit = {
+    assert(driverPod.getMetadata.getLabels.get("spark-role") === "driver")
+  }
 }
 
 private[spark] object KubernetesSuite {
