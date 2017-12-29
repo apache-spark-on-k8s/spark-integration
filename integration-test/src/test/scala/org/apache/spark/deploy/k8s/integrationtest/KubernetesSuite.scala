@@ -27,8 +27,10 @@ import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Minutes, Seconds, Span}
 
 import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackendFactory
-import org.apache.spark.deploy.k8s.integrationtest.constants.MINIKUBE_TEST_BACKEND
-import org.apache.spark.deploy.k8s.integrationtest.constants.SPARK_DISTRO_PATH
+import org.apache.spark.deploy.k8s.integrationtest.backend.minikube.MinikubeTestBackend
+import org.apache.spark.deploy.k8s.integrationtest.constants._
+import org.apache.spark.deploy.k8s.integrationtest.config._
+
 
 private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll with BeforeAndAfter {
 
@@ -50,6 +52,9 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   before {
     sparkAppConf = kubernetesTestComponents.newSparkAppConf()
       .set("spark.kubernetes.driver.label.spark-app-locator", APP_LOCATOR_LABEL)
+      .set(INIT_CONTAINER_DOCKER_IMAGE, tagImage("spark-init"))
+      .set(DRIVER_DOCKER_IMAGE, tagImage("spark-driver"))
+      .set(EXECUTOR_DOCKER_IMAGE, tagImage("spark-executor"))
     kubernetesTestComponents.createNamespace()
   }
 
@@ -58,10 +63,12 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   }
 
   test("Run SparkPi with no resources") {
+    doMinikubeCheck
     runSparkPiAndVerifyCompletion()
   }
 
   test("Run SparkPi with a very long application name.") {
+    doMinikubeCheck
     sparkAppConf.set("spark.app.name", "long" * 40)
     runSparkPiAndVerifyCompletion()
   }
@@ -100,6 +107,10 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       }
     }
   }
+  private def doMinikubeCheck(): Unit = {
+    assume(testBackend == MinikubeTestBackend)
+  }
+  private def tagImage(image: String): String = s"$image:${testBackend.dockerImageTag()}"
 }
 
 private[spark] object KubernetesSuite {

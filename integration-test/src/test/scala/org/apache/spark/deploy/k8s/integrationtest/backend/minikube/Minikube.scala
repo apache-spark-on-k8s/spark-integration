@@ -20,39 +20,13 @@ import java.nio.file.Paths
 
 import io.fabric8.kubernetes.client.{ConfigBuilder, DefaultKubernetesClient}
 
-import org.apache.commons.lang3.SystemUtils
 import org.apache.spark.deploy.k8s.integrationtest.{Logging, ProcessUtils}
 
 // TODO support windows
 private[spark] object Minikube extends Logging {
-  private val MINIKUBE_EXECUTABLE_DEST = if (SystemUtils.IS_OS_MAC_OSX) {
-    Paths.get("target", "minikube-bin", "darwin-amd64", "minikube").toFile
-  } else if (SystemUtils.IS_OS_WINDOWS) {
-    throw new IllegalStateException("Executing Minikube based integration tests not yet " +
-      " available on Windows.")
-  } else {
-    Paths.get("target", "minikube-bin", "linux-amd64", "minikube").toFile
-  }
-
-  private val EXPECTED_DOWNLOADED_MINIKUBE_MESSAGE = "Minikube is not downloaded, expected at " +
-    s"${MINIKUBE_EXECUTABLE_DEST.getAbsolutePath}"
-
   private val MINIKUBE_STARTUP_TIMEOUT_SECONDS = 60
 
-  // NOTE: This and the following methods are synchronized to prevent deleteMinikube from
-  // destroying the minikube VM while other methods try to use the VM.
-  // Such a race condition can corrupt the VM or some VM provisioning tools like VirtualBox.
-  def startMinikube(): Unit = synchronized {
-    assert(MINIKUBE_EXECUTABLE_DEST.exists(), EXPECTED_DOWNLOADED_MINIKUBE_MESSAGE)
-    if (getMinikubeStatus != MinikubeStatus.RUNNING) {
-      executeMinikube("start", "--memory", "6000", "--cpus", "8")
-    } else {
-      logInfo("Minikube is already started.")
-    }
-  }
-
   def getMinikubeIp: String = synchronized {
-    assert(MINIKUBE_EXECUTABLE_DEST.exists(), EXPECTED_DOWNLOADED_MINIKUBE_MESSAGE)
     val outputs = executeMinikube("ip")
       .filter(_.matches("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"))
     assert(outputs.size == 1, "Unexpected amount of output from minikube ip")
@@ -60,31 +34,21 @@ private[spark] object Minikube extends Logging {
   }
 
   def getMinikubeStatus: MinikubeStatus.Value = synchronized {
-    assert(MINIKUBE_EXECUTABLE_DEST.exists(), EXPECTED_DOWNLOADED_MINIKUBE_MESSAGE)
     val statusString = executeMinikube("status")
-      .filter(_.contains("minikube: "))
+      .filter(line => line.contains("minikubeVM: ") || line.contains("minikube:"))
       .head
+      .replaceFirst("minikubeVM: ", "")
       .replaceFirst("minikube: ", "")
     MinikubeStatus.unapply(statusString)
         .getOrElse(throw new IllegalStateException(s"Unknown status $statusString"))
   }
 
   def getDockerEnv: Map[String, String] = synchronized {
-    assert(MINIKUBE_EXECUTABLE_DEST.exists(), EXPECTED_DOWNLOADED_MINIKUBE_MESSAGE)
     executeMinikube("docker-env", "--shell", "bash")
         .filter(_.startsWith("export"))
         .map(_.replaceFirst("export ", "").split('='))
         .map(arr => (arr(0), arr(1).replaceAllLiterally("\"", "")))
         .toMap
-  }
-
-  def deleteMinikube(): Unit = synchronized {
-    assert(MINIKUBE_EXECUTABLE_DEST.exists, EXPECTED_DOWNLOADED_MINIKUBE_MESSAGE)
-    if (getMinikubeStatus != MinikubeStatus.NONE) {
-      executeMinikube("delete")
-    } else {
-      logInfo("Minikube was already not running.")
-    }
   }
 
   def getKubernetesClient: DefaultKubernetesClient = synchronized {
@@ -105,13 +69,8 @@ private[spark] object Minikube extends Logging {
   }
 
   private def executeMinikube(action: String, args: String*): Seq[String] = {
-    if (!MINIKUBE_EXECUTABLE_DEST.canExecute) {
-      if (!MINIKUBE_EXECUTABLE_DEST.setExecutable(true)) {
-        throw new IllegalStateException("Failed to make the Minikube binary executable.")
-      }
-    }
-    ProcessUtils.executeProcess(Array(MINIKUBE_EXECUTABLE_DEST.getAbsolutePath, action) ++ args,
-      MINIKUBE_STARTUP_TIMEOUT_SECONDS)
+    ProcessUtils.executeProcess(
+      Array("minikube", action) ++ args, MINIKUBE_STARTUP_TIMEOUT_SECONDS)
   }
 }
 

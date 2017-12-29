@@ -10,6 +10,10 @@ is subject to change.
 
 Note that currently the integration tests only run with Java 8.
 
+Integration tests firstly require installing [Minikube](https://kubernetes.io/docs/getting-started-guides/minikube/) on
+your machine, and for the `Minikube` binary to be on your `PATH`.. Refer to the Minikube documentation for instructions
+on how to install it. It is recommended to allocate at least 8 CPUs and 8GB of memory to the Minikube cluster.
+
 Running the integration tests requires a Spark distribution package tarball that
 contains Spark jars, submission clients, etc. You can download a tarball from
 http://spark.apache.org/downloads.html. Or, you can create a distribution from
