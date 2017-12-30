@@ -21,22 +21,24 @@ import java.util.UUID
 import io.fabric8.kubernetes.client.DefaultKubernetesClient
 
 import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackend
+import org.apache.spark.deploy.k8s.integrationtest.config._
 import org.apache.spark.deploy.k8s.integrationtest.docker.KubernetesSuiteDockerManager
 
 private[spark] object MinikubeTestBackend extends IntegrationTestBackend {
   private var defaultClient: DefaultKubernetesClient = _
-  private val userSkipBuildImages =
-    System.getProperty("spark.docker.test.skipBuildImages", "false").toBoolean
+  private val userProvidedDockerImageTag = Option(
+    System.getProperty(KUBERNETES_TEST_DOCKER_TAG_SYSTEM_PROPERTY))
   private val resolvedDockerImageTag =
-    UUID.randomUUID().toString.replaceAll("-", "")
+    userProvidedDockerImageTag.getOrElse(UUID.randomUUID().toString.replaceAll("-", ""))
   private val dockerManager = new KubernetesSuiteDockerManager(
     Minikube.getDockerEnv, resolvedDockerImageTag)
+
   override def initialize(): Unit = {
     val minikubeStatus = Minikube.getMinikubeStatus
     require(minikubeStatus == MinikubeStatus.RUNNING,
       s"Minikube must be running before integration tests can execute. Current status" +
         s" is: $minikubeStatus")
-    if (!userSkipBuildImages) {
+    if (userProvidedDockerImageTag.isEmpty) {
       dockerManager.buildSparkDockerImages()
     }
     defaultClient = Minikube.getKubernetesClient
@@ -44,7 +46,7 @@ private[spark] object MinikubeTestBackend extends IntegrationTestBackend {
 
   override def cleanUp(): Unit = {
     super.cleanUp()
-    if (!userSkipBuildImages) {
+    if (userProvidedDockerImageTag.isEmpty) {
       dockerManager.deleteImages()
     }
   }

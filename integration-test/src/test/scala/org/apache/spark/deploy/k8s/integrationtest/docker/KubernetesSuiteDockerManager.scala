@@ -30,6 +30,7 @@ import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Minutes, Seconds, Span}
 import scala.collection.JavaConverters._
 
+import org.apache.spark.deploy.k8s.integrationtest.constants._
 import org.apache.spark.deploy.k8s.integrationtest.KubernetesSuite
 import org.apache.spark.deploy.k8s.integrationtest.Logging
 import org.apache.spark.deploy.k8s.integrationtest.Utils.{RedirectThread, tryWithResource}
@@ -37,20 +38,13 @@ import org.apache.spark.deploy.k8s.integrationtest.Utils.{RedirectThread, tryWit
 private[spark] class KubernetesSuiteDockerManager(
   dockerEnv: Map[String, String], dockerTag: String) extends Logging {
 
-  private val DOCKER_BUILD_PATH = Paths.get("target", "docker")
+  private val DOCKER_BUILD_PATH = SPARK_DISTRO_PATH
   // Dockerfile paths must be relative to the build path.
-  private val BASE_DOCKER_FILE = "dockerfiles/spark-base/Dockerfile"
-  private val DRIVER_DOCKER_FILE = "dockerfiles/driver/Dockerfile"
-  private val DRIVERPY_DOCKER_FILE = "dockerfiles/driver-py/Dockerfile"
-  private val DRIVERR_DOCKER_FILE = "dockerfiles/driver-r/Dockerfile"
-  private val EXECUTOR_DOCKER_FILE = "dockerfiles/executor/Dockerfile"
-  private val EXECUTORPY_DOCKER_FILE = "dockerfiles/executor-py/Dockerfile"
-  private val EXECUTORR_DOCKER_FILE = "dockerfiles/executor-r/Dockerfile"
-  private val SHUFFLE_SERVICE_DOCKER_FILE = "dockerfiles/shuffle-service/Dockerfile"
-  private val INIT_CONTAINER_DOCKER_FILE = "dockerfiles/init-container/Dockerfile"
-  private val STAGING_SERVER_DOCKER_FILE = "dockerfiles/resource-staging-server/Dockerfile"
-  private val STATIC_ASSET_SERVER_DOCKER_FILE =
-    "dockerfiles/integration-test-asset-server/Dockerfile"
+  private val DOCKERFILES_DIR = "kubernetes/dockerfiles/"
+  private val BASE_DOCKER_FILE = DOCKERFILES_DIR + "spark-base/Dockerfile"
+  private val DRIVER_DOCKER_FILE = DOCKERFILES_DIR + "driver/Dockerfile"
+  private val EXECUTOR_DOCKER_FILE = DOCKERFILES_DIR + "executor/Dockerfile"
+  private val INIT_CONTAINER_DOCKER_FILE = DOCKERFILES_DIR + "init-container/Dockerfile"
   private val TIMEOUT = PatienceConfiguration.Timeout(Span(2, Minutes))
   private val INTERVAL = PatienceConfiguration.Interval(Span(2, Seconds))
   private val dockerHost = dockerEnv.getOrElse("DOCKER_HOST",
@@ -76,46 +70,18 @@ private[spark] class KubernetesSuiteDockerManager(
 
   def buildSparkDockerImages(): Unit = {
     Eventually.eventually(TIMEOUT, INTERVAL) { dockerClient.ping() }
-    // Building Python distribution environment
-    val pythonExec = sys.env.get("PYSPARK_DRIVER_PYTHON")
-      .orElse(sys.env.get("PYSPARK_PYTHON"))
-      .getOrElse("/usr/bin/python")
-    val builder = new ProcessBuilder(
-      Seq(pythonExec, "setup.py", "sdist").asJava)
-    builder.directory(new File(DOCKER_BUILD_PATH.toFile, "python"))
-    builder.redirectErrorStream(true) // Ugly but needed for stdout and stderr to synchronize
-    val process = builder.start()
-    new RedirectThread(process.getInputStream, System.out, "redirect output").start()
-    val exitCode = process.waitFor()
-    if (exitCode != 0) {
-      logInfo(s"exitCode: $exitCode")
-    }
     buildImage("spark-base", BASE_DOCKER_FILE)
     buildImage("spark-driver", DRIVER_DOCKER_FILE)
-    buildImage("spark-driver-py", DRIVERPY_DOCKER_FILE)
-    buildImage("spark-driver-r", DRIVERR_DOCKER_FILE)
     buildImage("spark-executor", EXECUTOR_DOCKER_FILE)
-    buildImage("spark-executor-py", EXECUTORPY_DOCKER_FILE)
-    buildImage("spark-executor-r", EXECUTORR_DOCKER_FILE)
-    buildImage("spark-shuffle", SHUFFLE_SERVICE_DOCKER_FILE)
-    buildImage("spark-resource-staging-server", STAGING_SERVER_DOCKER_FILE)
     buildImage("spark-init", INIT_CONTAINER_DOCKER_FILE)
-    buildImage("spark-integration-test-asset-server", STATIC_ASSET_SERVER_DOCKER_FILE)
   }
 
   def deleteImages(): Unit = {
     removeRunningContainers()
-    deleteImage("spark-driver")
-    deleteImage("spark-driver-py")
-    deleteImage("spark-driver-r")
-    deleteImage("spark-executor")
-    deleteImage("spark-executor-py")
-    deleteImage("spark-executor-r")
-    deleteImage("spark-shuffle")
-    deleteImage("spark-resource-staging-server")
-    deleteImage("spark-init")
-    deleteImage("spark-integration-test-asset-server")
     deleteImage("spark-base")
+    deleteImage("spark-driver")
+    deleteImage("spark-executor")
+    deleteImage("spark-init")
   }
 
   private def buildImage(name: String, dockerFile: String): Unit = {
