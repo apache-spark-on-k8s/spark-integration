@@ -40,6 +40,8 @@ invoked if the `integration-test` phase is run.
 With Maven, the integration test can be run using the following command:
 
 ```
+$ mvn clean pre-integration-test  \
+    -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz
 $ mvn clean integration-test  \
     -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz
 ```
@@ -50,20 +52,23 @@ In order to run against any cluster, use the following:
 ```sh
 $ mvn clean integration-test  \
     -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
-    -DextraScalaTestArgs="-Dspark.kubernetes.test.master=k8s://https://<master> -Dspark.docker.test.driverImage=<driver-image> -Dspark.docker.test.executorImage=<executor-image>"
+    -DextraScalaTestArgs="-Dspark.kubernetes.test.master=k8s://https://<master> \
+    -Dspark.docker.test.driverImage=<driver-image> \ 
+    -Dspark.docker.test.executorImage=<executor-image>
 ```
 
-# Reuse the previous Docker images
+# Specify existing docker images via image:tag
 
 The integration tests build a number of Docker images, which takes some time.
 By default, the images are built every time the tests run.  You may want to skip
 re-building those images during development, if the distribution package did not
 change since the last run. You can pass the property
-`spark.docker.test.skipBuildImages` to the test process.
+`spark.kubernetes.test.imageDockerTag` to the test process and specify the Docker 
+image tag that is appropriate.
 Here is an example:
 
 ```
 $ mvn clean integration-test  \
     -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
-    "-Dspark.docker.test.skipBuildImages=true"
+    "-Dspark.kubernetes.test.imageDockerTag=latest"
 ```
