@@ -18,7 +18,7 @@ package org.apache.spark.deploy.k8s.integrationtest
 
 package object config {
   val KUBERNETES_TEST_DOCKER_TAG_SYSTEM_PROPERTY = "spark.kubernetes.test.imageDockerTag"
-  val DRIVER_DOCKER_IMAGE = "spark.kubernetes.driver.docker.image"
-  val EXECUTOR_DOCKER_IMAGE = "spark.kubernetes.executor.docker.image"
-  val INIT_CONTAINER_DOCKER_IMAGE = "spark.kubernetes.initcontainer.docker.image"
+  val DRIVER_DOCKER_IMAGE = "spark.kubernetes.driver.container.image"
+  val EXECUTOR_DOCKER_IMAGE = "spark.kubernetes.executor.container.image"
+  val INIT_CONTAINER_DOCKER_IMAGE = "spark.kubernetes.initcontainer.container.image"
 }

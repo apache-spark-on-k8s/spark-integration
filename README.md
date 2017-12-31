@@ -20,7 +20,7 @@ http://spark.apache.org/downloads.html. Or, you can create a distribution from
 source code using `make-distribution.sh`. For example:
 
 ```
-$ git clone git@github.com:apache/spark.git
+$ https://github.com/apache/spark.git
 $ cd spark
 $ ./dev/make-distribution.sh --tgz \
      -Phadoop-2.7 -Pkubernetes -Pkinesis-asl -Phive -Phive-thriftserver
@@ -40,8 +40,6 @@ invoked if the `integration-test` phase is run.
 With Maven, the integration test can be run using the following command:
 
 ```
-$ mvn clean pre-integration-test  \
-    -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz
 $ mvn clean integration-test  \
     -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz
 ```
@@ -52,9 +50,7 @@ In order to run against any cluster, use the following:
 ```sh
 $ mvn clean integration-test  \
     -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
-    -DextraScalaTestArgs="-Dspark.kubernetes.test.master=k8s://https://<master> \
-    -Dspark.docker.test.driverImage=<driver-image> \ 
-    -Dspark.docker.test.executorImage=<executor-image>
+    -DextraScalaTestArgs="-Dspark.kubernetes.test.master=k8s://https://<master>
 ```
 
 # Specify existing docker images via image:tag
@@ -70,5 +66,5 @@ Here is an example:
 ```
 $ mvn clean integration-test  \
     -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
-    "-Dspark.kubernetes.test.imageDockerTag=latest"
+    -Dspark.kubernetes.test.imageDockerTag=latest
 ```
