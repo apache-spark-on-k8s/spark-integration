@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -ex
+<<<<<<< HEAD
 echo "deb http://http.debian.net/debian jessie-backports main" >> /etc/apt/sources.list
 apt-get update && apt-get install -y curl wget git tar openjdk-8-jdk
 
