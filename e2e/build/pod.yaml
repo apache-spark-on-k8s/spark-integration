@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ubuntu
+spec:
+  containers:
+  - image: gcr.io/k8s-testimages/kubekins-e2e:v20180102-0e2b24a0b-master
+    name: ubuntu
+    command: ["sleep", "3h"]
+    # args:
+    # - "--repo=github.com/apache/spark=master"
+    # - "--repo=github.com/apache-spark-on-k8s/integration-test=new-testing"
+    # - "--root=/go/src/"
+    # - "--upload=gs://kubernetes-jenkins/pr-logs"
+    # - "--clean"
+    env:
+    - name: JOB_NAME
+      value: "foxish"
+    - name: DOCKER_IN_DOCKER_ENABLED
+      value: "true"
+    - name: GOOGLE_APPLICATION_CREDENTIALS
+      value: /etc/service-account/service-account.json
+    - name: JENKINS_GCE_SSH_PRIVATE_KEY_FILE
+      value: /etc/ssh-key-secret/ssh-private
+    - name: JENKINS_GCE_SSH_PUBLIC_KEY_FILE
+      value: /etc/ssh-key-secret/ssh-public
+    # docker-in-docker needs privileged mode
+    securityContext:
+      privileged: true
+  terminationGracePeriodSeconds: 0
+  restartPolicy: Never
