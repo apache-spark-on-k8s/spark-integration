@@ -93,7 +93,8 @@ private[spark] class SparkAppConf {
 
 private[spark] case class SparkAppArguments(
     mainAppResource: String,
-    mainClass: String)
+    mainClass: String,
+    appArgs: Array[String])
 
 private[spark] object SparkAppLauncher extends Logging {
 
@@ -106,7 +107,9 @@ private[spark] object SparkAppLauncher extends Logging {
         "--deploy-mode", "cluster",
         "--class", appArguments.mainClass,
         "--master", appConf.get("spark.master")
-      ) ++ appConf.toStringArray :+ appArguments.mainAppResource
+      ) ++ appConf.toStringArray :+
+      appArguments.mainAppResource :+
+      appArguments.appArgs.mkString(" ")
     logInfo(s"Launching a spark app with command line: ${commandLine.mkString(" ")}")
     ProcessUtils.executeProcess(commandLine, timeoutSecs)
   }

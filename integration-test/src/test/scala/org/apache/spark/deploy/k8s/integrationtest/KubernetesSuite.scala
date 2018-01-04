@@ -75,6 +75,10 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     runSparkPiAndVerifyCompletion()
   }
 
+  test("Run SparkPi with an argument.") {
+    runSparkPiAndVerifyCompletion(appArgs = Array("5"))
+  }
+
   test("Run SparkPi with custom driver pod name, labels, annotations, and environment variables.") {
     sparkAppConf
       .set("spark.kubernetes.driver.pod.name", "spark-integration-spark-pi")
@@ -122,12 +126,13 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   private def runSparkPiAndVerifyCompletion(
       appResource: String = CONTAINER_LOCAL_SPARK_DISTRO_EXAMPLES_JAR,
       driverPodChecker: Pod => Unit = doBasicDriverPodCheck,
-      executorPodChecker: Pod => Unit = doBasicExecutorPodCheck): Unit = {
+      executorPodChecker: Pod => Unit = doBasicExecutorPodCheck,
+      appArgs: Array[String] = Array.empty[String]): Unit = {
     runSparkApplicationAndVerifyCompletion(
       appResource,
       SPARK_PI_MAIN_CLASS,
       Seq("Pi is roughly 3"),
-      Array.empty[String],
+      appArgs,
       driverPodChecker,
       executorPodChecker)
   }
@@ -141,7 +146,8 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       executorPodChecker: Pod => Unit): Unit = {
     val appArguments = SparkAppArguments(
       mainAppResource = appResource,
-      mainClass = mainClass)
+      mainClass = mainClass,
+      appArgs = appArgs)
     SparkAppLauncher.launch(appArguments, sparkAppConf, TIMEOUT.value.toSeconds.toInt)
 
     val driverPod = kubernetesTestComponents.kubernetesClient
