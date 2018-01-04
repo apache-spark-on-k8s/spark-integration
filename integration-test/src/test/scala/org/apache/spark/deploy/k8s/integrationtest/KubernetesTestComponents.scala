@@ -47,7 +47,7 @@ private[spark] class KubernetesTestComponents(defaultClient: DefaultKubernetesCl
       val namespaceList = defaultClient
         .namespaces()
         .list()
-        .getItems()
+        .getItems
         .asScala
       require(!namespaceList.exists(_.getMetadata.getName == namespace))
     }
@@ -61,6 +61,8 @@ private[spark] class KubernetesTestComponents(defaultClient: DefaultKubernetesCl
         System.getProperty("spark.docker.test.driverImage", "spark-driver:latest"))
       .set("spark.kubernetes.executor.container.image",
         System.getProperty("spark.docker.test.executorImage", "spark-executor:latest"))
+      .set("spark.kubernetes.initContainer.image",
+        System.getProperty("spark.docker.test.initContainerImage", "spark-init-container:latest"))
       .set("spark.executor.memory", "500m")
       .set("spark.executor.cores", "1")
       .set("spark.executors.instances", "1")

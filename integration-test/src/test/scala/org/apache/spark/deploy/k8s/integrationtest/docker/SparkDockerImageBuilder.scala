@@ -28,7 +28,7 @@ import org.apache.spark.deploy.k8s.integrationtest.constants.SPARK_DISTRO_PATH
 import org.apache.spark.deploy.k8s.integrationtest.Logging
 
 private[spark] class SparkDockerImageBuilder
-  (private val dockerEnv: Map[String, String]) extends Logging{
+  (private val dockerEnv: Map[String, String]) extends Logging {
 
   private val DOCKER_BUILD_PATH = SPARK_DISTRO_PATH
   // Dockerfile paths must be relative to the build path.

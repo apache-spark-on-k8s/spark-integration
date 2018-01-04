@@ -251,7 +251,7 @@ private[spark] object KubernetesSuite {
   val TEST_SECRET_NAME = "test-secret"
   val TEST_SECRET_KEY = "test-key"
   val TEST_SECRET_VALUE = "test-data"
-  val TEST_SECRET_MOUNT_PATH = "/wtc/secrets"
+  val TEST_SECRET_MOUNT_PATH = "/etc/secrets"
 
   case object ShuffleNotReadyException extends Exception
 }
