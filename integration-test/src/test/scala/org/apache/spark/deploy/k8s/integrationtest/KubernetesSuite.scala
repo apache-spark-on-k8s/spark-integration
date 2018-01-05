@@ -81,7 +81,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
   test("Run SparkPi using the remote example jar.") {
     sparkAppConf.set("spark.kubernetes.initContainer.image",
-      System.getProperty("spark.docker.test.initContainerImage", "spark-init-container:latest"))
+      System.getProperty("spark.docker.test.initContainerImage", "spark-init:latest"))
     runSparkPiAndVerifyCompletion(appResource = REMOTE_EXAMPLES_JAR_URI)
   }
 
@@ -135,11 +135,12 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       .set(s"spark.kubernetes.driver.secrets.$TEST_SECRET_NAME", TEST_SECRET_MOUNT_PATH)
       .set(s"spark.kubernetes.executor.secrets.$TEST_SECRET_NAME", TEST_SECRET_MOUNT_PATH)
     sparkAppConf.set("spark.kubernetes.initContainer.image",
-      System.getProperty("spark.docker.test.initContainerImage", "spark-init-container:latest"))
+      System.getProperty("spark.docker.test.initContainerImage", "spark-init:latest"))
 
     createTestSecret()
 
     runSparkPiAndVerifyCompletion(
+      appResource = REMOTE_EXAMPLES_JAR_URI,
       driverPodChecker = (driverPod: Pod) => {
         doBasicDriverPodCheck(driverPod)
         checkTestSecret(driverPod, withInitContainer = true)
