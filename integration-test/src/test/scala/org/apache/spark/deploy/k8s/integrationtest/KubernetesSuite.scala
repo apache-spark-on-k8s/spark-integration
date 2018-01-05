@@ -79,6 +79,12 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     runSparkPiAndVerifyCompletion(appArgs = Array("5"))
   }
 
+  test("Run SparkPi using the remote example jar.") {
+    sparkAppConf.set("spark.kubernetes.initContainer.image",
+      System.getProperty("spark.docker.test.initContainerImage", "spark-init-container:latest"))
+    runSparkPiAndVerifyCompletion(appResource = REMOTE_EXAMPLES_JAR_URI)
+  }
+
   test("Run SparkPi with custom driver pod name, labels, annotations, and environment variables.") {
     sparkAppConf
       .set("spark.kubernetes.driver.pod.name", "spark-integration-spark-pi")
@@ -120,6 +126,27 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       executorPodChecker = (executorPod: Pod) => {
         doBasicExecutorPodCheck(executorPod)
         checkTestSecret(executorPod)
+      })
+  }
+
+  test("Run SparkPi using the remote example jar with a test secret mounted into the driver and " +
+    "executor pods") {
+    sparkAppConf
+      .set(s"spark.kubernetes.driver.secrets.$TEST_SECRET_NAME", TEST_SECRET_MOUNT_PATH)
+      .set(s"spark.kubernetes.executor.secrets.$TEST_SECRET_NAME", TEST_SECRET_MOUNT_PATH)
+    sparkAppConf.set("spark.kubernetes.initContainer.image",
+      System.getProperty("spark.docker.test.initContainerImage", "spark-init-container:latest"))
+
+    createTestSecret()
+
+    runSparkPiAndVerifyCompletion(
+      driverPodChecker = (driverPod: Pod) => {
+        doBasicDriverPodCheck(driverPod)
+        checkTestSecret(driverPod, withInitContainer = true)
+      },
+      executorPodChecker = (executorPod: Pod) => {
+        doBasicExecutorPodCheck(executorPod)
+        checkTestSecret(executorPod, withInitContainer = true)
       })
   }
 
@@ -258,6 +285,9 @@ private[spark] object KubernetesSuite {
   val TEST_SECRET_KEY = "test-key"
   val TEST_SECRET_VALUE = "test-data"
   val TEST_SECRET_MOUNT_PATH = "/etc/secrets"
+
+  val REMOTE_EXAMPLES_JAR_URI =
+    "https://storage.googleapis.com/spark-k8s-integration-tests/jars/spark-examples_2.11-2.3.0.jar"
 
   case object ShuffleNotReadyException extends Exception
 }
