@@ -34,7 +34,7 @@ fi
 ### Set sensible defaults ###
 REPO="https://github.com/apache/spark"
 IMAGE_REPO="docker.io/kubespark"
-DEPLOY_MODE="cloud"
+DEPLOY_MODE="minikube"
 
 ### Parse options ###
 while getopts h:m:r:i:d: option

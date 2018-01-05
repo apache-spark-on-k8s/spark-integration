@@ -33,7 +33,7 @@ repo="https://github.com/apache/spark"
 # Special GCP project for publishing docker images built by test.
 image_repo="gcr.io/spark-testing-191023"
 cd "$(dirname "$0")"/../
-./e2e/runner.sh -m $master -r $repo -i $image_repo
+./e2e/runner.sh -m $master -r $repo -i $image_repo -d cloud
 
 # Copy out the junit xml files for consumption by k8s test-infra.
 ls -1 ./integration-test/target/surefire-reports/*.xml | cat -n | while read n f; do cp "$f" "/workspace/_artifacts/junit_0$n.xml"; done
