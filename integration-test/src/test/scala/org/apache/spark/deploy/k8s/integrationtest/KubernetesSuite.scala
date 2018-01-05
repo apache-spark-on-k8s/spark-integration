@@ -71,7 +71,12 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
   test("Run SparkPi with a master URL without a scheme.") {
     val url = kubernetesTestComponents.kubernetesClient.getMasterUrl
-    sparkAppConf.set("spark.master", s"k8s://${url.getHost}:${url.getPort}")
+    val k8sMasterUrl = if (url.getPort < 0) {
+      s"k8s://${url.getHost}"
+    } else {
+      s"k8s://${url.getHost}:${url.getPort}"
+    }
+    sparkAppConf.set("spark.master", k8sMasterUrl)
     runSparkPiAndVerifyCompletion()
   }
 
@@ -193,7 +198,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       .withLabel("spark-role", "executor")
       .list()
       .getItems
-    executorPods.forEach { pod =>
+    executorPods.asScala.foreach { pod =>
       executorPodChecker(pod)
     }
 
