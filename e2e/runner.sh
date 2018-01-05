@@ -17,10 +17,11 @@
 
 usage () {
   echo "Usage:"
-  echo "    ./e2e/e2e-cloud.sh -h Display this help message."
-  echo "    ./e2e/e2e-cloud.sh -m <master-url> -r <spark-repo> -i <image-repo>"
+  echo "    ./e2e/runner.sh -h Display this help message."
+  echo "    ./e2e/runner.sh -m <master-url> -r <spark-repo> -i <image-repo> -d [minikube|cloud]"
   echo "        note that you must have kubectl configured to access the specified"
   echo "        <master-url>. Also you must have access to the <image-repo>. "
+  echo "        The deployment mode can be specified using the 'd' flag."
 }
 
 ### Basic Validation ###
@@ -33,9 +34,10 @@ fi
 ### Set sensible defaults ###
 REPO="https://github.com/apache/spark"
 IMAGE_REPO="docker.io/kubespark"
+DEPLOY_MODE="cloud"
 
 ### Parse options ###
-while getopts m:r:i:h option
+while getopts h:m:r:i:d: option
 do
  case "${option}"
  in
@@ -46,6 +48,7 @@ do
  m) MASTER=${OPTARG};;
  r) REPO=${OPTARG};;
  i) IMAGE_REPO=${OPTARG};;
+ d) DEPLOY_MODE=${OPTARG};;
  \? )
  echo "Invalid Option: -$OPTARG" 1>&2
  exit 1
@@ -60,6 +63,14 @@ then
    echo ""
    usage
    exit
+fi
+
+### Ensure deployment mode is minikube/cloud.
+if [[ $DEPLOY_MODE != minikube && $DEPLOY_MODE != cloud ]];
+then
+  echo "Invalid deployment mode $DEPLOY_MODE"
+  usage
+  exit 1
 fi
 
 echo "Running tests on cluster $MASTER against $REPO."
@@ -80,14 +91,20 @@ cd spark && ./dev/make-distribution.sh --tgz -Phadoop-2.7 -Pkubernetes -DskipTes
 tag=$(git rev-parse HEAD | cut -c -6)
 echo "Spark distribution built at SHA $tag"
 
-cd dist && ./sbin/build-push-docker-images.sh -r $IMAGE_REPO -t $tag build
-if  [[ $IMAGE_REPO == gcr.io* ]] ;
+if  [[ $DEPLOY_MODE == cloud ]] ;
 then
-  gcloud docker -- push $IMAGE_REPO/spark-driver:$tag && \
-  gcloud docker -- push $IMAGE_REPO/spark-executor:$tag && \
-  gcloud docker -- push $IMAGE_REPO/spark-init:$tag
+  cd dist && ./sbin/build-push-docker-images.sh -r $IMAGE_REPO -t $tag build
+  if  [[ $IMAGE_REPO == gcr.io* ]] ;
+  then
+    gcloud docker -- push $IMAGE_REPO/spark-driver:$tag && \
+    gcloud docker -- push $IMAGE_REPO/spark-executor:$tag && \
+    gcloud docker -- push $IMAGE_REPO/spark-init:$tag
+  else
+    ./sbin/build-push-docker-images.sh -r $IMAGE_REPO -t $tag push
+  fi
 else
-  ./sbin/build-push-docker-images.sh -r $IMAGE_REPO -t $tag push
+  # -m option for minikube.
+  cd dist && ./sbin/build-push-docker-images.sh -m -r $IMAGE_REPO -t $tag build
 fi
 
 cd $root/integration-test

@@ -15,25 +15,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-### This script is used by Kubernetes Test Infrastructure to run integration tests.
-### See documenation at https://github.com/kubernetes/test-infra/tree/master/prow
-### To run the integration tests yourself, use e2e/runner.sh.
+### This script can be used to run integration tests locally on minikube.
+### Requirements: minikube v0.23+ installed and kubectl configured to use it.
+###               DNS addon enabled.
 
 set -ex
 
-# Install basic dependencies
-echo "deb http://http.debian.net/debian jessie-backports main" >> /etc/apt/sources.list
-apt-get update && apt-get install -y curl wget git tar
-apt-get install -t jessie-backports -y openjdk-8-jdk
+### Basic Validation ###
+if [ ! -d "integration-test" ]; then
+  echo "This script must be invoked from the top-level directory of the integration-tests repository"
+  usage
+  exit 1
+fi
 
 # Set up config.
 master=$(kubectl cluster-info | head -n 1 | grep -oE "https?://[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]+)?")
 repo="https://github.com/apache/spark"
+image_repo=test
 
-# Special GCP project for publishing docker images built by test.
-image_repo="gcr.io/spark-testing-191023"
-cd "$(dirname "$0")"/../
-./e2e/runner.sh -m $master -r $repo -i $image_repo
-
-# Copy out the junit xml files for consumption by k8s test-infra.
-ls -1 ./integration-test/target/surefire-reports/*.xml | cat -n | while read n f; do cp "$f" "/workspace/_artifacts/junit_0$n.xml"; done
+# Run tests in minikube mode.
+./e2e/runner.sh -m $master -r $repo -i $image_repo -d minikube
