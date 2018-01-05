@@ -112,6 +112,7 @@ $root/spark/build/mvn clean -Ddownload.plugin.skip=true integration-test \
           -Dspark-distro-tgz=$root/spark/*.tgz \
           -DextraScalaTestArgs="-Dspark.kubernetes.test.master=k8s://$MASTER \
             -Dspark.docker.test.driverImage=$IMAGE_REPO/spark-driver:$tag \
-            -Dspark.docker.test.executorImage=$IMAGE_REPO/spark-executor:$tag" || :
+            -Dspark.docker.test.executorImage=$IMAGE_REPO/spark-executor:$tag \
+            -Dspark.docker.test.initContainerImage=$IMAGE_REPO/spark-init:$tag" || :
 
 echo "TEST SUITE FINISHED"

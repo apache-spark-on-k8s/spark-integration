@@ -28,7 +28,7 @@ import org.apache.spark.deploy.k8s.integrationtest.constants.SPARK_DISTRO_PATH
 import org.apache.spark.deploy.k8s.integrationtest.Logging
 
 private[spark] class SparkDockerImageBuilder
-  (private val dockerEnv: Map[String, String]) extends Logging{
+  (private val dockerEnv: Map[String, String]) extends Logging {
 
   private val DOCKER_BUILD_PATH = SPARK_DISTRO_PATH
   // Dockerfile paths must be relative to the build path.
@@ -36,6 +36,7 @@ private[spark] class SparkDockerImageBuilder
   private val BASE_DOCKER_FILE = DOCKERFILES_DIR + "spark-base/Dockerfile"
   private val DRIVER_DOCKER_FILE = DOCKERFILES_DIR + "driver/Dockerfile"
   private val EXECUTOR_DOCKER_FILE = DOCKERFILES_DIR + "executor/Dockerfile"
+  private val INIT_CONTAINER_DOCKER_FILE = DOCKERFILES_DIR + "init-container/Dockerfile"
   private val TIMEOUT = PatienceConfiguration.Timeout(Span(2, Minutes))
   private val INTERVAL = PatienceConfiguration.Interval(Span(2, Seconds))
   private val dockerHost = dockerEnv.getOrElse("DOCKER_HOST",
@@ -64,6 +65,7 @@ private[spark] class SparkDockerImageBuilder
     buildImage("spark-base", BASE_DOCKER_FILE)
     buildImage("spark-driver", DRIVER_DOCKER_FILE)
     buildImage("spark-executor", EXECUTOR_DOCKER_FILE)
+    buildImage("spark-init", INIT_CONTAINER_DOCKER_FILE)
   }
 
   private def buildImage(name: String, dockerFile: String): Unit = {
