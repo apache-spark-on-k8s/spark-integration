@@ -16,8 +16,7 @@
 # limitations under the License.
 
 ### This script can be used to run integration tests locally on minikube.
-### Requirements: minikube v0.23+ installed and kubectl configured to use it.
-###               DNS addon enabled.
+### Requirements: minikube v0.23+ with the DNS addon enabled, and kubectl configured to point to it.
 
 set -ex
 
