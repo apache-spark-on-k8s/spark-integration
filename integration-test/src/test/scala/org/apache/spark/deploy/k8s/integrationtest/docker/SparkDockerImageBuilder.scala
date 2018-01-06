@@ -17,9 +17,10 @@
 package org.apache.spark.deploy.k8s.integrationtest.docker
 
 import java.net.URI
+import java.net.URLEncoder
 import java.nio.file.Paths
 
-import com.spotify.docker.client.{DefaultDockerClient, DockerCertificates, LoggingBuildHandler}
+import com.spotify.docker.client.{DockerClient, DefaultDockerClient, DockerCertificates, LoggingBuildHandler}
 import org.apache.http.client.utils.URIBuilder
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Minutes, Seconds, Span}
@@ -62,18 +63,32 @@ private[spark] class SparkDockerImageBuilder
 
   def buildSparkDockerImages(): Unit = {
     Eventually.eventually(TIMEOUT, INTERVAL) { dockerClient.ping() }
-    buildImage("spark-base", BASE_DOCKER_FILE)
+    buildImage("spark-base", BASE_DOCKER_FILE,
+      Some("{\"spark_jars\":\"jars\",\"img_path\":\"kubernetes/dockerfiles\"}"))
     buildImage("spark-driver", DRIVER_DOCKER_FILE)
     buildImage("spark-executor", EXECUTOR_DOCKER_FILE)
     buildImage("spark-init", INIT_CONTAINER_DOCKER_FILE)
   }
 
-  private def buildImage(name: String, dockerFile: String): Unit = {
-    dockerClient.build(
-      DOCKER_BUILD_PATH,
-      name,
-      dockerFile,
-      new LoggingBuildHandler())
+  private def buildImage(
+      name: String,
+      dockerFile: String,
+      buildArgs: Option[String] = None): Unit = {
+    if (buildArgs.nonEmpty) {
+      dockerClient.build(
+        DOCKER_BUILD_PATH,
+        name,
+        dockerFile,
+        new LoggingBuildHandler(),
+        DockerClient.BuildParam.create("buildargs", URLEncoder.encode(buildArgs.get, "UTF-8")))
+    } else {
+      dockerClient.build(
+        DOCKER_BUILD_PATH,
+        name,
+        dockerFile,
+        new LoggingBuildHandler())
+    }
+
     logInfo(s"Built $name docker image")
   }
 }
