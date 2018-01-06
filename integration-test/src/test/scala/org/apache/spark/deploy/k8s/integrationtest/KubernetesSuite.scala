@@ -40,6 +40,11 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   private var kubernetesTestComponents: KubernetesTestComponents = _
   private var sparkAppConf: SparkAppConf = _
 
+  private val driverImage = System.getProperty("spark.docker.test.driverImage", "spark-driver:latest")
+  private val executorImage = System.getProperty("spark.docker.test.executorImage", "spark-executor:latest")
+  private val initContainerImage = System.getProperty("spark.docker.test.initContainerImage", "spark-init:latest")
+
+
   override def beforeAll(): Unit = {
     testBackend.initialize()
     kubernetesTestComponents = new KubernetesTestComponents(testBackend.getKubernetesClient)
@@ -51,6 +56,8 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
   before {
     sparkAppConf = kubernetesTestComponents.newSparkAppConf()
+      .set("spark.kubernetes.driver.container.image", driverImage)
+      .set("spark.kubernetes.executor.container.image", executorImage)
       .set("spark.kubernetes.driver.label.spark-app-locator", APP_LOCATOR_LABEL)
       .set("spark.kubernetes.executor.label.spark-app-locator", APP_LOCATOR_LABEL)
     kubernetesTestComponents.createNamespace()
@@ -85,8 +92,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   }
 
   test("Run SparkPi using the remote example jar.") {
-    sparkAppConf.set("spark.kubernetes.initContainer.image",
-      System.getProperty("spark.docker.test.initContainerImage", "spark-init:latest"))
+    sparkAppConf.set("spark.kubernetes.initContainer.image", initContainerImage)
     runSparkPiAndVerifyCompletion(appResource = REMOTE_EXAMPLES_JAR_URI)
   }
 
@@ -139,8 +145,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     sparkAppConf
       .set(s"spark.kubernetes.driver.secrets.$TEST_SECRET_NAME", TEST_SECRET_MOUNT_PATH)
       .set(s"spark.kubernetes.executor.secrets.$TEST_SECRET_NAME", TEST_SECRET_MOUNT_PATH)
-    sparkAppConf.set("spark.kubernetes.initContainer.image",
-      System.getProperty("spark.docker.test.initContainerImage", "spark-init:latest"))
+    sparkAppConf.set("spark.kubernetes.initContainer.image", initContainerImage)
 
     createTestSecret()
 
@@ -214,12 +219,12 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   }
 
   private def doBasicDriverPodCheck(driverPod: Pod): Unit = {
-    assert(driverPod.getSpec.getContainers.get(0).getImage === "spark-driver:latest")
+    assert(driverPod.getSpec.getContainers.get(0).getImage === driverImage)
     assert(driverPod.getSpec.getContainers.get(0).getName === "spark-kubernetes-driver")
   }
 
   private def doBasicExecutorPodCheck(executorPod: Pod): Unit = {
-    assert(executorPod.getSpec.getContainers.get(0).getImage === "spark-executor:latest")
+    assert(executorPod.getSpec.getContainers.get(0).getImage === executorImage)
     assert(executorPod.getSpec.getContainers.get(0).getName === "executor")
   }
 
