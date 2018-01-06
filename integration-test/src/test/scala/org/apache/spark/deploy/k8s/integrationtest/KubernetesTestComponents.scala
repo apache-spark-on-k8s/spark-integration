@@ -57,10 +57,6 @@ private[spark] class KubernetesTestComponents(defaultClient: DefaultKubernetesCl
     new SparkAppConf()
       .set("spark.master", s"k8s://${kubernetesClient.getMasterUrl}")
       .set("spark.kubernetes.namespace", namespace)
-      .set("spark.kubernetes.driver.container.image",
-        System.getProperty("spark.docker.test.driverImage", "spark-driver:latest"))
-      .set("spark.kubernetes.executor.container.image",
-        System.getProperty("spark.docker.test.executorImage", "spark-executor:latest"))
       .set("spark.executor.memory", "500m")
       .set("spark.executor.cores", "1")
       .set("spark.executors.instances", "1")
