@@ -161,6 +161,14 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       })
   }
 
+  test("Run PageRank using remote data file") {
+    sparkAppConf
+      .set("spark.kubernetes.mountDependencies.filesDownloadDir", FILE_DOWNLOAD_PATH)
+      .set("spark.files", REMOTE_PAGE_RANK_DATA_FILE)
+      .set("spark.kubernetes.initContainer.image", initContainerImage)
+    runSparkPageRankAndVerifyCompletion(appArgs = Array(LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE))
+  }
+
   private def runSparkPiAndVerifyCompletion(
       appResource: String = CONTAINER_LOCAL_SPARK_DISTRO_EXAMPLES_JAR,
       driverPodChecker: Pod => Unit = doBasicDriverPodCheck,
@@ -170,6 +178,20 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       appResource,
       SPARK_PI_MAIN_CLASS,
       Seq("Pi is roughly 3"),
+      appArgs,
+      driverPodChecker,
+      executorPodChecker)
+  }
+
+  private def runSparkPageRankAndVerifyCompletion(
+      appResource: String = CONTAINER_LOCAL_SPARK_DISTRO_EXAMPLES_JAR,
+      driverPodChecker: Pod => Unit = doBasicDriverPodCheck,
+      executorPodChecker: Pod => Unit = doBasicExecutorPodCheck,
+      appArgs: Array[String]): Unit = {
+    runSparkApplicationAndVerifyCompletion(
+      appResource,
+      SPARK_PAGE_RANK_MAIN_CLASS,
+      Seq("1 has rank", "2 has rank", "3 has rank", "4 has rank"),
       appArgs,
       driverPodChecker,
       executorPodChecker)
@@ -291,14 +313,21 @@ private[spark] object KubernetesSuite {
   val CONTAINER_LOCAL_SPARK_DISTRO_EXAMPLES_JAR: String = s"local:///opt/spark/examples/jars/" +
     s"${SPARK_DISTRO_EXAMPLES_JAR_FILE.getName}"
   val SPARK_PI_MAIN_CLASS: String = "org.apache.spark.examples.SparkPi"
+  val SPARK_PAGE_RANK_MAIN_CLASS: String = "org.apache.spark.examples.SparkPageRank"
 
   val TEST_SECRET_NAME = "test-secret"
   val TEST_SECRET_KEY = "test-key"
   val TEST_SECRET_VALUE = "test-data"
   val TEST_SECRET_MOUNT_PATH = "/etc/secrets"
 
+  val FILE_DOWNLOAD_PATH = "/var/spark-data/spark-files"
+
   val REMOTE_EXAMPLES_JAR_URI =
     "https://storage.googleapis.com/spark-k8s-integration-tests/jars/spark-examples_2.11-2.3.0.jar"
+
+  val REMOTE_PAGE_RANK_DATA_FILE =
+    "https://storage.googleapis.com/spark-k8s-integration-tests/files/pagerank_data.txt"
+  val LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE = s"$FILE_DOWNLOAD_PATH/pagerank_data.txt"
 
   case object ShuffleNotReadyException extends Exception
 }
