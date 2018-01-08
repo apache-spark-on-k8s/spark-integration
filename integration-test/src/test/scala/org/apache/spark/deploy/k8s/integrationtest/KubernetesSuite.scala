@@ -163,10 +163,10 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
   test("Run PageRank using remote data file") {
     sparkAppConf
-      .set("spark.kubernetes.mountDependencies.filesDownloadDir", FILE_DOWNLOAD_PATH)
+      .set("spark.kubernetes.mountDependencies.filesDownloadDir", CONTAINER_LOCAL_FILE_DOWNLOAD_PATH)
       .set("spark.files", REMOTE_PAGE_RANK_DATA_FILE)
       .set("spark.kubernetes.initContainer.image", initContainerImage)
-    runSparkPageRankAndVerifyCompletion(appArgs = Array(LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE))
+    runSparkPageRankAndVerifyCompletion(appArgs = Array(CONTAINER_LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE))
   }
 
   private def runSparkPiAndVerifyCompletion(
@@ -320,14 +320,15 @@ private[spark] object KubernetesSuite {
   val TEST_SECRET_VALUE = "test-data"
   val TEST_SECRET_MOUNT_PATH = "/etc/secrets"
 
-  val FILE_DOWNLOAD_PATH = "/var/spark-data/spark-files"
+  val CONTAINER_LOCAL_FILE_DOWNLOAD_PATH = "/var/spark-data/spark-files"
 
   val REMOTE_EXAMPLES_JAR_URI =
     "https://storage.googleapis.com/spark-k8s-integration-tests/jars/spark-examples_2.11-2.3.0.jar"
 
   val REMOTE_PAGE_RANK_DATA_FILE =
     "https://storage.googleapis.com/spark-k8s-integration-tests/files/pagerank_data.txt"
-  val LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE = s"$FILE_DOWNLOAD_PATH/pagerank_data.txt"
+  val CONTAINER_LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE =
+    s"$CONTAINER_LOCAL_FILE_DOWNLOAD_PATH/pagerank_data.txt"
 
   case object ShuffleNotReadyException extends Exception
 }
