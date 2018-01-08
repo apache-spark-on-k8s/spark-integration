@@ -18,7 +18,7 @@
 usage () {
   echo "Usage:"
   echo "    ./e2e/runner.sh -h Display this help message."
-  echo "    ./e2e/runner.sh -m <master-url> -r <spark-repo> -i <image-repo> -d [minikube|cloud]"
+  echo "    ./e2e/runner.sh -m <master-url> -r <spark-repo> -b <branch> -i <image-repo> -d [minikube|cloud]"
   echo "        note that you must have kubectl configured to access the specified"
   echo "        <master-url>. Also you must have access to the <image-repo>. "
   echo "        The deployment mode can be specified using the 'd' flag."
