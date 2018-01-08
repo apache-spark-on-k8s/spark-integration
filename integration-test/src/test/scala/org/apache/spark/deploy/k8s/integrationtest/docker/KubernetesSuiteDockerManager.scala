@@ -19,6 +19,7 @@ package org.apache.spark.deploy.k8s.integrationtest.docker
 import java.io.{File, PrintWriter}
 import java.net.URI
 import java.nio.file.Paths
+import java.util.UUID
 
 import com.google.common.base.Charsets
 import com.google.common.io.Files
@@ -33,10 +34,10 @@ import scala.collection.JavaConverters._
 import org.apache.spark.deploy.k8s.integrationtest.constants._
 import org.apache.spark.deploy.k8s.integrationtest.KubernetesSuite
 import org.apache.spark.deploy.k8s.integrationtest.Logging
-import org.apache.spark.deploy.k8s.integrationtest.Utils.{RedirectThread, tryWithResource}
+import org.apache.spark.deploy.k8s.integrationtest.Utils.tryWithResource
 
 private[spark] class KubernetesSuiteDockerManager(
-  dockerEnv: Map[String, String], dockerTag: String) extends Logging {
+    dockerEnv: Map[String, String], userProvidedDockerImageTag: Option[String]) extends Logging {
 
   private val DOCKER_BUILD_PATH = SPARK_DISTRO_PATH
   // Dockerfile paths must be relative to the build path.
@@ -47,9 +48,11 @@ private[spark] class KubernetesSuiteDockerManager(
   private val INIT_CONTAINER_DOCKER_FILE = DOCKERFILES_DIR + "init-container/Dockerfile"
   private val TIMEOUT = PatienceConfiguration.Timeout(Span(2, Minutes))
   private val INTERVAL = PatienceConfiguration.Interval(Span(2, Seconds))
+
+  private val resolvedDockerImageTag =
+    userProvidedDockerImageTag.getOrElse(UUID.randomUUID().toString.replaceAll("-", ""))
   private val dockerHost = dockerEnv.getOrElse("DOCKER_HOST",
     throw new IllegalStateException("DOCKER_HOST env not found."))
-
   private val originalDockerUri = URI.create(dockerHost)
   private val httpsDockerUri = new URIBuilder()
     .setHost(originalDockerUri.getHost)
@@ -69,31 +72,39 @@ private[spark] class KubernetesSuiteDockerManager(
     .build()
 
   def buildSparkDockerImages(): Unit = {
-    Eventually.eventually(TIMEOUT, INTERVAL) { dockerClient.ping() }
-    buildImage("spark-base", BASE_DOCKER_FILE)
-    buildImage("spark-driver", DRIVER_DOCKER_FILE)
-    buildImage("spark-executor", EXECUTOR_DOCKER_FILE)
-    buildImage("spark-init", INIT_CONTAINER_DOCKER_FILE)
+    if (userProvidedDockerImageTag.isEmpty) {
+      Eventually.eventually(TIMEOUT, INTERVAL) {
+        dockerClient.ping()
+      }
+      buildImage("spark-base", BASE_DOCKER_FILE)
+      buildImage("spark-driver", DRIVER_DOCKER_FILE)
+      buildImage("spark-executor", EXECUTOR_DOCKER_FILE)
+      buildImage("spark-init", INIT_CONTAINER_DOCKER_FILE)
+    }
   }
 
   def deleteImages(): Unit = {
-    removeRunningContainers()
-    deleteImage("spark-base")
-    deleteImage("spark-driver")
-    deleteImage("spark-executor")
-    deleteImage("spark-init")
+    if (userProvidedDockerImageTag.isEmpty) {
+      removeRunningContainers()
+      deleteImage("spark-base")
+      deleteImage("spark-driver")
+      deleteImage("spark-executor")
+      deleteImage("spark-init")
+    }
   }
 
+  def dockerImageTag(): String = resolvedDockerImageTag
+
   private def buildImage(name: String, dockerFile: String): Unit = {
-    logInfo(s"Building Docker image - $name:$dockerTag")
+    logInfo(s"Building Docker image - $name:$resolvedDockerImageTag")
     val dockerFileWithBaseTag = new File(DOCKER_BUILD_PATH.resolve(
-      s"$dockerFile-$dockerTag").toAbsolutePath.toString)
+      s"$dockerFile-$resolvedDockerImageTag").toAbsolutePath.toString)
     dockerFileWithBaseTag.deleteOnExit()
     try {
       val originalDockerFileText = Files.readLines(
         DOCKER_BUILD_PATH.resolve(dockerFile).toFile, Charsets.UTF_8).asScala
       val dockerFileTextWithProperBaseImage = originalDockerFileText.map(
-        _.replace("FROM spark-base", s"FROM spark-base:$dockerTag"))
+        _.replace("FROM spark-base", s"FROM spark-base:$resolvedDockerImageTag"))
       tryWithResource(Files.newWriter(dockerFileWithBaseTag, Charsets.UTF_8)) { fileWriter =>
         tryWithResource(new PrintWriter(fileWriter)) { printWriter =>
           for (line <- dockerFileTextWithProperBaseImage) {
@@ -105,8 +116,8 @@ private[spark] class KubernetesSuiteDockerManager(
       }
       dockerClient.build(
         DOCKER_BUILD_PATH,
-        s"$name:$dockerTag",
-        s"$dockerFile-$dockerTag",
+        s"$name:$resolvedDockerImageTag",
+        s"$dockerFile-$resolvedDockerImageTag",
         new LoggingBuildHandler())
     } finally {
       dockerFileWithBaseTag.delete()
@@ -119,7 +130,7 @@ private[spark] class KubernetesSuiteDockerManager(
   private def removeRunningContainers(): Unit = {
     val imageIds = dockerClient.listImages(ListImagesParam.allImages())
       .asScala
-      .filter(image => image.repoTags().asScala.exists(_.endsWith(s":$dockerTag")))
+      .filter(image => image.repoTags().asScala.exists(_.endsWith(s":$resolvedDockerImageTag")))
       .map(_.id())
       .toSet
     Eventually.eventually(KubernetesSuite.TIMEOUT, KubernetesSuite.INTERVAL) {
@@ -127,7 +138,7 @@ private[spark] class KubernetesSuiteDockerManager(
       require(
         runningContainersWithImageTag.isEmpty,
         s"${runningContainersWithImageTag.size} containers found still running" +
-          s" with the image tag $dockerTag")
+          s" with the image tag $resolvedDockerImageTag")
     }
     dockerClient.listContainers(ListContainersParam.allContainers())
       .asScala
@@ -139,7 +150,7 @@ private[spark] class KubernetesSuiteDockerManager(
         .asScala
         .filter(container => imageIds.contains(container.imageId()))
       require(containersWithImageTag.isEmpty, s"${containersWithImageTag.size} containers still" +
-        s" found with image tag $dockerTag.")
+        s" found with image tag $resolvedDockerImageTag.")
     }
 
   }
@@ -148,7 +159,7 @@ private[spark] class KubernetesSuiteDockerManager(
     val runningContainersWithImageTag = getRunningContainersWithImageIds(imageIds)
     if (runningContainersWithImageTag.nonEmpty) {
       logInfo(s"Found ${runningContainersWithImageTag.size} containers running with" +
-        s" an image with the tag $dockerTag. Attempting to remove these containers," +
+        s" an image with the tag $resolvedDockerImageTag. Attempting to remove these containers," +
         s" and then will stall for 2 seconds.")
       runningContainersWithImageTag.foreach { container =>
         dockerClient.stopContainer(container.id(), 5)
@@ -168,10 +179,10 @@ private[spark] class KubernetesSuiteDockerManager(
 
   private def deleteImage(name: String): Unit = {
     try {
-      dockerClient.removeImage(s"$name:$dockerTag")
+      dockerClient.removeImage(s"$name:$resolvedDockerImageTag")
     } catch {
       case e: RuntimeException =>
-        logWarning(s"Failed to delete image $name:$dockerTag. There may be images leaking in the" +
+        logWarning(s"Failed to delete image $name:$resolvedDockerImageTag. There may be images leaking in the" +
           s" docker environment which are now stale and unused.", e)
     }
   }

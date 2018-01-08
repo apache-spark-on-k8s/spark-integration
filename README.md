@@ -56,7 +56,7 @@ http://spark.apache.org/downloads.html. Or, you can create a distribution from
 source code using `make-distribution.sh`. For example:
 
 ```
-$ https://github.com/apache/spark.git
+$ git clone git@github.com/apache/spark.git
 $ cd spark
 $ ./dev/make-distribution.sh --tgz \
      -Phadoop-2.7 -Pkubernetes -Pkinesis-asl -Phive -Phive-thriftserver

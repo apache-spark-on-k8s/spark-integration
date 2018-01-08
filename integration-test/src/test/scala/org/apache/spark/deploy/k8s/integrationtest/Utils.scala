@@ -18,8 +18,9 @@ package org.apache.spark.deploy.k8s.integrationtest
 
 import java.io.Closeable
 import java.net.URI
+import java.io.{IOException, InputStream, OutputStream}
 
-import java.io.{IOException,InputStream,OutputStream}
+import com.google.common.io.ByteStreams
 
 object Utils extends Logging {
 
@@ -84,31 +85,5 @@ object Utils extends Logging {
     }
 
     s"k8s://$resolvedURL"
-  }
-
-  class RedirectThread(
-     in: InputStream,
-     out: OutputStream,
-     name: String,
-     propagateEof: Boolean = false) extends Thread(name) {
-      setDaemon(true)
-      override def run() {
-        scala.util.control.Exception.ignoring(classOf[IOException]) {
-          // FIXME: We copy the stream on the level of bytes to avoid encoding problems.
-          Utils.tryWithSafeFinally {
-            val buf = new Array[Byte](1024)
-            var len = in.read(buf)
-            while (len != -1) {
-              out.write(buf, 0, len)
-              out.flush()
-              len = in.read(buf)
-            }
-          } {
-            if (propagateEof) {
-              out.close()
-            }
-          }
-        }
-      }
   }
 }
