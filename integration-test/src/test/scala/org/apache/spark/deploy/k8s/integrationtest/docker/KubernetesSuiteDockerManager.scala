@@ -36,7 +36,7 @@ import org.apache.spark.deploy.k8s.integrationtest.Logging
 import org.apache.spark.deploy.k8s.integrationtest.Utils.{RedirectThread, tryWithResource}
 
 private[spark] class KubernetesSuiteDockerManager(
-                                                   dockerEnv: Map[String, String], dockerTag: String) extends Logging {
+  dockerEnv: Map[String, String], dockerTag: String) extends Logging {
 
   private val DOCKER_BUILD_PATH = SPARK_DISTRO_PATH
   // Dockerfile paths must be relative to the build path.

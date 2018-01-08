@@ -19,11 +19,39 @@ package org.apache.spark.deploy.k8s.integrationtest
 import java.io.Closeable
 import java.net.URI
 
+import java.io.{IOException,InputStream,OutputStream}
+
 object Utils extends Logging {
 
   def tryWithResource[R <: Closeable, T](createResource: => R)(f: R => T): T = {
     val resource = createResource
     try f.apply(resource) finally resource.close()
+  }
+
+  def tryWithSafeFinally[T](block: => T)(finallyBlock: => Unit): T = {
+    var originalThrowable: Throwable = null
+    try {
+      block
+    } catch {
+      case t: Throwable =>
+        // Purposefully not using NonFatal, because even fatal exceptions
+        // we don't want to have our finallyBlock suppress
+        originalThrowable = t
+        throw originalThrowable
+    } finally {
+      try {
+        finallyBlock
+      } catch {
+        case t: Throwable =>
+          if (originalThrowable != null) {
+            originalThrowable.addSuppressed(t)
+            logWarning(s"Suppressing exception in finally: " + t.getMessage, t)
+            throw originalThrowable
+          } else {
+            throw t
+          }
+      }
+    }
   }
 
   def checkAndGetK8sMasterUrl(rawMasterURL: String): String = {
@@ -56,5 +84,31 @@ object Utils extends Logging {
     }
 
     s"k8s://$resolvedURL"
+  }
+
+  class RedirectThread(
+     in: InputStream,
+     out: OutputStream,
+     name: String,
+     propagateEof: Boolean = false) extends Thread(name) {
+      setDaemon(true)
+      override def run() {
+        scala.util.control.Exception.ignoring(classOf[IOException]) {
+          // FIXME: We copy the stream on the level of bytes to avoid encoding problems.
+          Utils.tryWithSafeFinally {
+            val buf = new Array[Byte](1024)
+            var len = in.read(buf)
+            while (len != -1) {
+              out.write(buf, 0, len)
+              out.flush()
+              len = in.read(buf)
+            }
+          } {
+            if (propagateEof) {
+              out.close()
+            }
+          }
+        }
+      }
   }
 }
