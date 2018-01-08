@@ -22,8 +22,8 @@ Kubernetes master is running at https://xyz
 If you want to use a local [minikube](https://github.com/kubernetes/minikube) cluster,
 the minimum tested version is 0.23.0, with the kube-dns addon enabled
 and the recommended configuration is 3 CPUs and 4G of memory. There is also a wrapper
-script for running on minikube, `e2e/e2e-minikube.sh` for testing the apache/spark repo
-in specific.
+script for running on minikube, `e2e/e2e-minikube.sh` for testing the master branch
+of the apache/spark repository in specific.
 
 ```
 $ minikube start --memory 4000 --cpus 3
@@ -39,7 +39,7 @@ Example usages of the script:
 $ ./e2e/runner.sh -m https://xyz -i docker.io/foxish -d cloud
 $ ./e2e/runner.sh -m https://xyz -i test -d minikube
 $ ./e2e/runner.sh -m https://xyz -i test -r https://github.com/my-spark/spark -d minikube
-
+$ ./e2e/runner.sh -m https://xyz -i test -r https://github.com/my-spark/spark -b my-branch -d minikube
 ```
 
 # Detailed Documentation
