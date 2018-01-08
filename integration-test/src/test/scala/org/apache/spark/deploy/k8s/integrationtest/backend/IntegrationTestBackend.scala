@@ -24,7 +24,7 @@ import org.apache.spark.deploy.k8s.integrationtest.backend.minikube.MinikubeTest
 
 private[spark] trait IntegrationTestBackend {
   def initialize(): Unit
-  def getKubernetesClient(): DefaultKubernetesClient
+  def getKubernetesClient: DefaultKubernetesClient
   def dockerImageTag(): String
   def cleanUp(): Unit = {}
 }

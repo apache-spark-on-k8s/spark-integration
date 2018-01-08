@@ -47,7 +47,7 @@ private[spark] class KubernetesTestComponents(defaultClient: DefaultKubernetesCl
       val namespaceList = defaultClient
         .namespaces()
         .list()
-        .getItems()
+        .getItems
         .asScala
       require(!namespaceList.exists(_.getMetadata.getName == namespace))
     }
@@ -57,10 +57,6 @@ private[spark] class KubernetesTestComponents(defaultClient: DefaultKubernetesCl
     new SparkAppConf()
       .set("spark.master", s"k8s://${kubernetesClient.getMasterUrl}")
       .set("spark.kubernetes.namespace", namespace)
-      .set("spark.kubernetes.driver.container.image",
-        System.getProperty("spark.docker.test.driverImage", "spark-driver:latest"))
-      .set("spark.kubernetes.executor.container.image",
-        System.getProperty("spark.docker.test.executorImage", "spark-executor:latest"))
       .set("spark.executor.memory", "500m")
       .set("spark.executor.cores", "1")
       .set("spark.executors.instances", "1")
@@ -91,7 +87,8 @@ private[spark] class SparkAppConf {
 
 private[spark] case class SparkAppArguments(
     mainAppResource: String,
-    mainClass: String)
+    mainClass: String,
+    appArgs: Array[String])
 
 private[spark] object SparkAppLauncher extends Logging {
 
@@ -104,7 +101,9 @@ private[spark] object SparkAppLauncher extends Logging {
         "--deploy-mode", "cluster",
         "--class", appArguments.mainClass,
         "--master", appConf.get("spark.master")
-      ) ++ appConf.toStringArray :+ appArguments.mainAppResource
+      ) ++ appConf.toStringArray :+
+      appArguments.mainAppResource :+
+      appArguments.appArgs.mkString(" ")
     logInfo(s"Launching a spark app with command line: ${commandLine.mkString(" ")}")
     ProcessUtils.executeProcess(commandLine, timeoutSecs)
   }
