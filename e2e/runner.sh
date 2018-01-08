@@ -35,9 +35,10 @@ fi
 REPO="https://github.com/apache/spark"
 IMAGE_REPO="docker.io/kubespark"
 DEPLOY_MODE="minikube"
+BRANCH="master"
 
 ### Parse options ###
-while getopts h:m:r:i:d: option
+while getopts h:m:r:i:d:b: option
 do
  case "${option}"
  in
@@ -47,6 +48,7 @@ do
   ;;
  m) MASTER=${OPTARG};;
  r) REPO=${OPTARG};;
+ b) BRANCH=${OPTARG};;
  i) IMAGE_REPO=${OPTARG};;
  d) DEPLOY_MODE=${OPTARG};;
  \? )
@@ -82,12 +84,14 @@ root=$(pwd)
 # clone spark distribution if needed.
 if [ -d "spark" ];
 then
-  (cd spark && git pull);
+  (cd spark && git pull origin $BRANCH);
 else
   git clone $REPO;
 fi
 
-cd spark && ./dev/make-distribution.sh --tgz -Phadoop-2.7 -Pkubernetes -DskipTests
+cd spark
+git checkout -B $BRANCH origin/$BRANCH
+./dev/make-distribution.sh --tgz -Phadoop-2.7 -Pkubernetes -DskipTests
 tag=$(git rev-parse HEAD | cut -c -6)
 echo "Spark distribution built at SHA $tag"
 
