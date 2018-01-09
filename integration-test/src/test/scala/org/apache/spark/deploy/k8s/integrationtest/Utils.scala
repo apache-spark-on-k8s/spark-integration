@@ -18,9 +18,6 @@ package org.apache.spark.deploy.k8s.integrationtest
 
 import java.io.Closeable
 import java.net.URI
-import java.io.{IOException, InputStream, OutputStream}
-
-import com.google.common.io.ByteStreams
 
 object Utils extends Logging {
 

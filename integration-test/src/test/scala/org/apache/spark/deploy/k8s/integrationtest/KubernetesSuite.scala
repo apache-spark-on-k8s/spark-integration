@@ -73,18 +73,15 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   }
 
   test("Run SparkPi with no resources") {
-    doMinikubeCheck
     runSparkPiAndVerifyCompletion()
   }
 
   test("Run SparkPi with a very long application name.") {
-    doMinikubeCheck
     sparkAppConf.set("spark.app.name", "long" * 40)
     runSparkPiAndVerifyCompletion()
   }
 
   test("Run SparkPi with a master URL without a scheme.") {
-    doMinikubeCheck
     val url = kubernetesTestComponents.kubernetesClient.getMasterUrl
     val k8sMasterUrl = if (url.getPort < 0) {
       s"k8s://${url.getHost}"
@@ -225,9 +222,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
           .contains(e), "The application did not complete.")
       }
     }
-  }
-  private def doMinikubeCheck(): Unit = {
-    assume(testBackend == MinikubeTestBackend)
   }
   private def tagImage(image: String): String = s"$image:${testBackend.dockerImageTag()}"
 

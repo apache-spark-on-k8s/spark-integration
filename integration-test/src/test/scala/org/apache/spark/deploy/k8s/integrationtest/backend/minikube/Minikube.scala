@@ -26,14 +26,14 @@ import org.apache.spark.deploy.k8s.integrationtest.{Logging, ProcessUtils}
 private[spark] object Minikube extends Logging {
   private val MINIKUBE_STARTUP_TIMEOUT_SECONDS = 60
 
-  def getMinikubeIp: String = synchronized {
+  def getMinikubeIp: String = {
     val outputs = executeMinikube("ip")
       .filter(_.matches("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"))
     assert(outputs.size == 1, "Unexpected amount of output from minikube ip")
     outputs.head
   }
 
-  def getMinikubeStatus: MinikubeStatus.Value = synchronized {
+  def getMinikubeStatus: MinikubeStatus.Value = {
     val statusString = executeMinikube("status")
       .filter(line => line.contains("minikubeVM: ") || line.contains("minikube:"))
       .head
@@ -43,7 +43,7 @@ private[spark] object Minikube extends Logging {
         .getOrElse(throw new IllegalStateException(s"Unknown status $statusString"))
   }
 
-  def getDockerEnv: Map[String, String] = synchronized {
+  def getDockerEnv: Map[String, String] = {
     executeMinikube("docker-env", "--shell", "bash")
         .filter(_.startsWith("export"))
         .map(_.replaceFirst("export ", "").split('='))
@@ -51,7 +51,7 @@ private[spark] object Minikube extends Logging {
         .toMap
   }
 
-  def getKubernetesClient: DefaultKubernetesClient = synchronized {
+  def getKubernetesClient: DefaultKubernetesClient = {
     val kubernetesMaster = s"https://${getMinikubeIp}:8443"
     val userHome = System.getProperty("user.home")
     val kubernetesConf = new ConfigBuilder()
