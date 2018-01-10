@@ -40,11 +40,14 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   private var kubernetesTestComponents: KubernetesTestComponents = _
   private var sparkAppConf: SparkAppConf = _
 
-  private val driverImage = System.getProperty("spark.docker.test.driverImage",
+  private val driverImage = System.getProperty(
+    "spark.docker.test.driverImage",
     "spark-driver:latest")
-  private val executorImage = System.getProperty("spark.docker.test.executorImage",
+  private val executorImage = System.getProperty(
+    "spark.docker.test.executorImage",
     "spark-executor:latest")
-  private val initContainerImage = System.getProperty("spark.docker.test.initContainerImage",
+  private val initContainerImage = System.getProperty(
+    "spark.docker.test.initContainerImage",
     "spark-init:latest")
 
 
