@@ -90,9 +90,11 @@ git checkout -B $BRANCH origin/$BRANCH
 TAG=$(git rev-parse HEAD | cut -c -6)
 echo "Spark distribution built at SHA $TAG"
 
+cd $SPARK_REPO_ROOT/dist
+
 if  [[ $DEPLOY_MODE == cloud ]] ;
 then
-  cd dist && ./sbin/build-push-docker-images.sh -r $IMAGE_REPO -t $TAG build
+  ./sbin/build-push-docker-images.sh -r $IMAGE_REPO -t $TAG build
   if  [[ $IMAGE_REPO == gcr.io* ]] ;
   then
     gcloud docker -- push $IMAGE_REPO/spark-driver:$TAG && \
@@ -103,10 +105,11 @@ then
   fi
 else
   # -m option for minikube.
-  cd dist && ./sbin/build-push-docker-images.sh -m -r $IMAGE_REPO -t $TAG build
+  ./sbin/build-push-docker-images.sh -m -r $IMAGE_REPO -t $TAG build
 fi
 
-$TEST_ROOT/integration-test/build/mvn clean -Ddownload.plugin.skip=true integration-test \
+cd $TEST_ROOT/integration-test
+$SPARK_REPO_ROOT/build/mvn clean -Ddownload.plugin.skip=true integration-test \
           -Dspark-distro-tgz=$SPARK_REPO_ROOT/*.tgz \
           -DextraScalaTestArgs="-Dspark.kubernetes.test.master=k8s://$MASTER \
             -Dspark.docker.test.driverImage=$IMAGE_REPO/spark-driver:$TAG \
