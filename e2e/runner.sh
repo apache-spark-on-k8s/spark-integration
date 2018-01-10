@@ -24,12 +24,7 @@ usage () {
   echo "        The deployment mode can be specified using the 'd' flag."
 }
 
-### Basic Validation ###
-if [ ! -d "integration-test" ]; then
-  echo "This script must be invoked from the top-level directory of the integration-tests repository"
-  usage
-  exit 1
-fi
+cd "$(dirname "$0")"
 
 ### Set sensible defaults ###
 REPO="https://github.com/apache/spark"
@@ -79,44 +74,46 @@ echo "Running tests on cluster $MASTER against $REPO."
 echo "Spark images will be created in $IMAGE_REPO"
 
 set -ex
-root=$(pwd)
-
+TEST_ROOT=$(git rev-parse --show-toplevel)
+SPARK_REPO_ROOT="$TEST_ROOT/spark"
 # clone spark distribution if needed.
-if [ -d "spark" ];
+if [ -d "$SPARK_REPO_ROOT" ];
 then
-  (cd spark && git pull origin $BRANCH);
+  (cd $SPARK_REPO_ROOT && git pull origin $BRANCH);
 else
-  git clone $REPO;
+  git clone $REPO $SPARK_REPO_ROOT
 fi
 
-cd spark
+cd $SPARK_REPO_ROOT
 git checkout -B $BRANCH origin/$BRANCH
 ./dev/make-distribution.sh --tgz -Phadoop-2.7 -Pkubernetes -DskipTests
-tag=$(git rev-parse HEAD | cut -c -6)
-echo "Spark distribution built at SHA $tag"
+TAG=$(git rev-parse HEAD | cut -c -6)
+echo "Spark distribution built at SHA $TAG"
+
+cd $SPARK_REPO_ROOT/dist
 
 if  [[ $DEPLOY_MODE == cloud ]] ;
 then
-  cd dist && ./sbin/build-push-docker-images.sh -r $IMAGE_REPO -t $tag build
+  ./sbin/build-push-docker-images.sh -r $IMAGE_REPO -t $TAG build
   if  [[ $IMAGE_REPO == gcr.io* ]] ;
   then
-    gcloud docker -- push $IMAGE_REPO/spark-driver:$tag && \
-    gcloud docker -- push $IMAGE_REPO/spark-executor:$tag && \
-    gcloud docker -- push $IMAGE_REPO/spark-init:$tag
+    gcloud docker -- push $IMAGE_REPO/spark-driver:$TAG && \
+    gcloud docker -- push $IMAGE_REPO/spark-executor:$TAG && \
+    gcloud docker -- push $IMAGE_REPO/spark-init:$TAG
   else
-    ./sbin/build-push-docker-images.sh -r $IMAGE_REPO -t $tag push
+    ./sbin/build-push-docker-images.sh -r $IMAGE_REPO -t $TAG push
   fi
 else
   # -m option for minikube.
-  cd dist && ./sbin/build-push-docker-images.sh -m -r $IMAGE_REPO -t $tag build
+  ./sbin/build-push-docker-images.sh -m -r $IMAGE_REPO -t $TAG build
 fi
 
-cd $root/integration-test
-$root/spark/build/mvn clean -Ddownload.plugin.skip=true integration-test \
-          -Dspark-distro-tgz=$root/spark/*.tgz \
+cd $TEST_ROOT/integration-test
+$SPARK_REPO_ROOT/build/mvn clean -Ddownload.plugin.skip=true integration-test \
+          -Dspark-distro-tgz=$SPARK_REPO_ROOT/*.tgz \
           -DextraScalaTestArgs="-Dspark.kubernetes.test.master=k8s://$MASTER \
-            -Dspark.docker.test.driverImage=$IMAGE_REPO/spark-driver:$tag \
-            -Dspark.docker.test.executorImage=$IMAGE_REPO/spark-executor:$tag \
-            -Dspark.docker.test.initContainerImage=$IMAGE_REPO/spark-init:$tag" || :
+            -Dspark.docker.test.driverImage=$IMAGE_REPO/spark-driver:$TAG \
+            -Dspark.docker.test.executorImage=$IMAGE_REPO/spark-executor:$TAG \
+            -Dspark.docker.test.initContainerImage=$IMAGE_REPO/spark-init:$TAG" || :
 
 echo "TEST SUITE FINISHED"
