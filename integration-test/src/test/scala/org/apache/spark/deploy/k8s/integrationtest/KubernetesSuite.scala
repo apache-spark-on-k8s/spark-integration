@@ -40,9 +40,15 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   private var kubernetesTestComponents: KubernetesTestComponents = _
   private var sparkAppConf: SparkAppConf = _
 
-  private val driverImage = System.getProperty("spark.docker.test.driverImage", "spark-driver:latest")
-  private val executorImage = System.getProperty("spark.docker.test.executorImage", "spark-executor:latest")
-  private val initContainerImage = System.getProperty("spark.docker.test.initContainerImage", "spark-init:latest")
+  private val driverImage = System.getProperty(
+    "spark.docker.test.driverImage",
+    "spark-driver:latest")
+  private val executorImage = System.getProperty(
+    "spark.docker.test.executorImage",
+    "spark-executor:latest")
+  private val initContainerImage = System.getProperty(
+    "spark.docker.test.initContainerImage",
+    "spark-init:latest")
 
 
   override def beforeAll(): Unit = {
@@ -91,11 +97,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     runSparkPiAndVerifyCompletion(appArgs = Array("5"))
   }
 
-  test("Run SparkPi using the remote example jar.") {
-    sparkAppConf.set("spark.kubernetes.initContainer.image", initContainerImage)
-    runSparkPiAndVerifyCompletion(appResource = REMOTE_EXAMPLES_JAR_URI)
-  }
-
   test("Run SparkPi with custom driver pod name, labels, annotations, and environment variables.") {
     sparkAppConf
       .set("spark.kubernetes.driver.pod.name", "spark-integration-spark-pi")
@@ -140,17 +141,30 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       })
   }
 
-  test("Run SparkPi using the remote example jar with a test secret mounted into the driver and " +
-    "executor pods") {
+  test("Run PageRank using remote data file") {
     sparkAppConf
+      .set("spark.kubernetes.mountDependencies.filesDownloadDir",
+        CONTAINER_LOCAL_FILE_DOWNLOAD_PATH)
+      .set("spark.files", REMOTE_PAGE_RANK_DATA_FILE)
+      .set("spark.kubernetes.initContainer.image", initContainerImage)
+    runSparkPageRankAndVerifyCompletion(
+      appArgs = Array(CONTAINER_LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE))
+  }
+
+  test("Run PageRank using remote data file with test secret mounted into the driver and " +
+    "executors") {
+    sparkAppConf
+      .set("spark.kubernetes.mountDependencies.filesDownloadDir",
+        CONTAINER_LOCAL_FILE_DOWNLOAD_PATH)
+      .set("spark.files", REMOTE_PAGE_RANK_DATA_FILE)
       .set(s"spark.kubernetes.driver.secrets.$TEST_SECRET_NAME", TEST_SECRET_MOUNT_PATH)
       .set(s"spark.kubernetes.executor.secrets.$TEST_SECRET_NAME", TEST_SECRET_MOUNT_PATH)
-    sparkAppConf.set("spark.kubernetes.initContainer.image", initContainerImage)
+      .set("spark.kubernetes.initContainer.image", initContainerImage)
 
     createTestSecret()
 
-    runSparkPiAndVerifyCompletion(
-      appResource = REMOTE_EXAMPLES_JAR_URI,
+    runSparkPageRankAndVerifyCompletion(
+      appArgs = Array(CONTAINER_LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE),
       driverPodChecker = (driverPod: Pod) => {
         doBasicDriverPodCheck(driverPod)
         checkTestSecret(driverPod, withInitContainer = true)
@@ -159,14 +173,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
         doBasicExecutorPodCheck(executorPod)
         checkTestSecret(executorPod, withInitContainer = true)
       })
-  }
-
-  test("Run PageRank using remote data file") {
-    sparkAppConf
-      .set("spark.kubernetes.mountDependencies.filesDownloadDir", CONTAINER_LOCAL_FILE_DOWNLOAD_PATH)
-      .set("spark.files", REMOTE_PAGE_RANK_DATA_FILE)
-      .set("spark.kubernetes.initContainer.image", initContainerImage)
-    runSparkPageRankAndVerifyCompletion(appArgs = Array(CONTAINER_LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE))
   }
 
   private def runSparkPiAndVerifyCompletion(
@@ -321,9 +327,6 @@ private[spark] object KubernetesSuite {
   val TEST_SECRET_MOUNT_PATH = "/etc/secrets"
 
   val CONTAINER_LOCAL_FILE_DOWNLOAD_PATH = "/var/spark-data/spark-files"
-
-  val REMOTE_EXAMPLES_JAR_URI =
-    "https://storage.googleapis.com/spark-k8s-integration-tests/jars/spark-examples_2.11-2.3.0.jar"
 
   val REMOTE_PAGE_RANK_DATA_FILE =
     "https://storage.googleapis.com/spark-k8s-integration-tests/files/pagerank_data.txt"
