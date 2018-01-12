@@ -90,21 +90,31 @@ git checkout -B $BRANCH origin/$BRANCH
 TAG=$(git rev-parse HEAD | cut -c -6)
 echo "Spark distribution built at SHA $TAG"
 
+FILE_SERVER_IMAGE="$IMAGE_REPO/spark-examples-file-server:$TAG"
+FILE_SERVER_BUILD_DIR="$TEST_ROOT/integration-test/docker-file-server"
+rm -rf $FILE_SERVER_BUILD_DIR/jars
+mkdir -p $FILE_SERVER_BUILD_DIR/jars
+cp $SPARK_REPO_ROOT/dist/examples/jars/spark-examples*.jar $FILE_SERVER_BUILD_DIR/jars/.
 cd $SPARK_REPO_ROOT/dist
 
 if  [[ $DEPLOY_MODE == cloud ]] ;
 then
+  docker build -t $FILE_SERVER_IMAGE "$TEST_ROOT/integration-test/docker-file-server"
   ./sbin/build-push-docker-images.sh -r $IMAGE_REPO -t $TAG build
   if  [[ $IMAGE_REPO == gcr.io* ]] ;
   then
     gcloud docker -- push $IMAGE_REPO/spark-driver:$TAG && \
     gcloud docker -- push $IMAGE_REPO/spark-executor:$TAG && \
     gcloud docker -- push $IMAGE_REPO/spark-init:$TAG
+    gcloud docker -- push $FILE_SERVER_IMAGE
   else
     ./sbin/build-push-docker-images.sh -r $IMAGE_REPO -t $TAG push
+    docker push $FILE_SERVER_IMAGE
   fi
 else
   # -m option for minikube.
+  eval $(minikube docker-env)
+  docker build -t $FILE_SERVER_IMAGE "$TEST_ROOT/integration-test/docker-file-server"
   ./sbin/build-push-docker-images.sh -m -r $IMAGE_REPO -t $TAG build
 fi
 
@@ -112,6 +122,7 @@ cd $TEST_ROOT/integration-test
 $SPARK_REPO_ROOT/build/mvn clean -Ddownload.plugin.skip=true integration-test \
           -Dspark-distro-tgz=$SPARK_REPO_ROOT/*.tgz \
           -DextraScalaTestArgs="-Dspark.kubernetes.test.master=k8s://$MASTER \
+            -Dspark.docker.test.fileServerImage=$FILE_SERVER_IMAGE \
             -Dspark.docker.test.driverImage=$IMAGE_REPO/spark-driver:$TAG \
             -Dspark.docker.test.executorImage=$IMAGE_REPO/spark-executor:$TAG \
             -Dspark.docker.test.initContainerImage=$IMAGE_REPO/spark-init:$TAG" || :
