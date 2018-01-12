@@ -41,7 +41,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   private var sparkHomeDir: Path = _
   private var kubernetesTestComponents: KubernetesTestComponents = _
   private var sparkAppConf: SparkAppConf = _
-  private var remoteExamplesJarUri: URI = _
   private var image: String = _
   private var containerLocalSparkDistroExamplesJar: String = _
 
@@ -74,11 +73,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       .set("spark.kubernetes.driver.label.spark-app-locator", APP_LOCATOR_LABEL)
       .set("spark.kubernetes.executor.label.spark-app-locator", APP_LOCATOR_LABEL)
     kubernetesTestComponents.createNamespace()
-    remoteExamplesJarUri = SparkExamplesFileServerRunner
-      .launchServerAndGetUriForExamplesJar(
-        kubernetesTestComponents,
-        getTestImageTag,
-        getTestImageRepo)
   }
 
   after {
@@ -107,10 +101,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
   test("Run SparkPi with an argument.") {
     runSparkPiAndVerifyCompletion(appArgs = Array("5"))
-  }
-
-  test("Run SparkPi using the remote example jar.") {
-    runSparkPiAndVerifyCompletion(appResource = remoteExamplesJarUri.toString)
   }
 
   test("Run SparkPi with custom driver pod name, labels, annotations, and environment variables.") {
@@ -177,8 +167,8 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
     createTestSecret()
 
-    runSparkPiAndVerifyCompletion(
-      appResource = remoteExamplesJarUri.toString,
+    runSparkPageRankAndVerifyCompletion(
+      appArgs = Array(CONTAINER_LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE),
       driverPodChecker = (driverPod: Pod) => {
         doBasicDriverPodCheck(driverPod)
         checkTestSecret(driverPod, withInitContainer = true)

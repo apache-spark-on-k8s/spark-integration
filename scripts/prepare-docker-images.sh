@@ -33,27 +33,18 @@ then
   echo "No unpacked distribution was found at $UNPACKED_SPARK_TGZ. Please run clone-spark.sh and build-spark.sh first." && exit 1;
 fi
 
-FILE_SERVER_IMAGE="$IMAGE_REPO/spark-examples-file-server:$IMAGE_TAG"
-FILE_SERVER_BUILD_DIR="$TEST_ROOT_DIR/docker-file-server"
-rm -rf $FILE_SERVER_BUILD_DIR/jars
-mkdir -p $FILE_SERVER_BUILD_DIR/jars
-cp $UNPACKED_SPARK_TGZ/examples/jars/spark-examples*.jar $FILE_SERVER_BUILD_DIR/jars/.
 cd $UNPACKED_SPARK_TGZ
 if  [[ $DEPLOY_MODE == cloud ]] ;
 then
-  docker build -t $FILE_SERVER_IMAGE "$FILE_SERVER_BUILD_DIR"
   $UNPACKED_SPARK_TGZ/bin/docker-image-tool.sh -r $IMAGE_REPO -t $IMAGE_TAG build
   if  [[ $IMAGE_REPO == gcr.io* ]] ;
   then
     gcloud docker -- push $IMAGE_REPO/spark:$IMAGE_TAG && \
-    gcloud docker -- push $FILE_SERVER_IMAGE
   else
     $UNPACKED_SPARK_TGZ/bin/docker-image-tool.sh -r $IMAGE_REPO -t $IMAGE_TAG push
-    docker push $FILE_SERVER_IMAGE
   fi
 else
   # -m option for minikube.
   eval $(minikube docker-env)
-  docker build -t $FILE_SERVER_IMAGE $FILE_SERVER_BUILD_DIR
   $UNPACKED_SPARK_TGZ/bin/docker-image-tool.sh -m -r $IMAGE_REPO -t $IMAGE_TAG build
 fi

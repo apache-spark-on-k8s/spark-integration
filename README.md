@@ -11,7 +11,7 @@ is subject to change. Note that currently the integration tests only run with Ja
 The simplest way to run the integration tests is to install and run Minikube, then run the following:
 
     build/mvn integration-test
-    
+
 The minimum tested version of Minikube is 0.23.0. The kube-dns addon must be enabled. Minikube should
 run with a minimum of 3 CPUs and 4G of memory:
 
@@ -39,7 +39,7 @@ Therefore the command looks like this:
       -Dspark.kubernetes.test.deployMode=cloud \
       -Dspark.kubernetes.test.master=https://example.com:8443/apiserver \
       -Dspark.kubernetes.test.repo=docker.example.com/spark-images
-      
+
 ## Re-using Docker Images
 
 By default, the test framework will build new Docker images on every test execution. A unique image tag is generated,
