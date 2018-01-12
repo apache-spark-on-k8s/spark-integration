@@ -46,7 +46,7 @@ cd $UNPACKED_SPARK_TGZ
 if  [[ $DEPLOY_MODE == cloud ]] ;
 then
   docker build -t $FILE_SERVER_IMAGE "$FILE_SERVER_BUILD_DIR"
-  $UNPACKED_SPARK_TGZ/bin/docker-image-tool.sh -r $IMAGE_REPO -t $TAG build
+  $UNPACKED_SPARK_TGZ/bin/docker-image-tool.sh -r $IMAGE_REPO -t $IMAGE_TAG build
   if  [[ $IMAGE_REPO == gcr.io* ]] ;
   then
     gcloud docker -- push $IMAGE_REPO/spark:$IMAGE_TAG && \
