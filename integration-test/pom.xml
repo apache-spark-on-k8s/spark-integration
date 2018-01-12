@@ -40,7 +40,6 @@
     <slf4j-log4j12.version>1.7.24</slf4j-log4j12.version>
     <sbt.project.name>kubernetes-integration-tests</sbt.project.name>
     <spark-distro-tgz>YOUR-SPARK-DISTRO-TARBALL-HERE</spark-distro-tgz>
-    <spark-dockerfiles-dir>YOUR-DOCKERFILES-DIR-HERE</spark-dockerfiles-dir>
     <test.exclude.tags></test.exclude.tags>
   </properties>
   <packaging>jar</packaging>
@@ -137,37 +136,6 @@
                 <argument>-c</argument>
                 <argument>rm -rf spark-distro; mkdir spark-distro-tmp; cd spark-distro-tmp; tar xfz ${spark-distro-tgz}; mv * ../spark-distro; cd ..; rm -rf spark-distro-tmp; rm -rf docker-file-server/jars; mkdir -p docker-file-server/jars; cp spark-distro/examples/jars/spark-examples*.jar docker-file-server/jars/.</argument>
               </arguments>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>com.googlecode.maven-download-plugin</groupId>
-        <artifactId>download-maven-plugin</artifactId>
-        <version>${download-maven-plugin.version}</version>
-        <executions>
-          <execution>
-            <id>download-minikube-linux</id>
-            <phase>pre-integration-test</phase>
-            <goals>
-              <goal>wget</goal>
-            </goals>
-            <configuration>
-              <url>https://storage.googleapis.com/minikube/releases/v0.22.0/minikube-linux-amd64</url>
-              <outputDirectory>${project.build.directory}/minikube-bin/linux-amd64</outputDirectory>
-              <outputFileName>minikube</outputFileName>
-            </configuration>
-          </execution>
-          <execution>
-            <id>download-minikube-darwin</id>
-            <phase>pre-integration-test</phase>
-            <goals>
-              <goal>wget</goal>
-            </goals>
-            <configuration>
-              <url>https://storage.googleapis.com/minikube/releases/v0.22.0/minikube-darwin-amd64</url>
-              <outputDirectory>${project.build.directory}/minikube-bin/darwin-amd64</outputDirectory>
-              <outputFileName>minikube</outputFileName>
             </configuration>
           </execution>
         </executions>

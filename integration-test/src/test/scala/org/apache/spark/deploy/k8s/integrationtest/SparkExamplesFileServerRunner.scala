@@ -26,7 +26,7 @@ import org.apache.http.client.utils.URIBuilder
 private[spark] object SparkExamplesFileServerRunner {
 
   private val fileServerImage = System.getProperty(
-      "spark.docker.test.fileServerImage", "spark-examples-file-server:latest")
+    "spark.docker.test.fileServerImage", "spark-examples-file-server:latest")
   private val fileServerExampleJarsDir = Paths.get("docker-file-server", "jars")
   require(
     fileServerExampleJarsDir

@@ -19,29 +19,33 @@ package org.apache.spark.deploy.k8s.integrationtest.backend.minikube
 import io.fabric8.kubernetes.client.DefaultKubernetesClient
 
 import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackend
-import org.apache.spark.deploy.k8s.integrationtest.constants.MINIKUBE_TEST_BACKEND
-import org.apache.spark.deploy.k8s.integrationtest.docker.SparkDockerImageBuilder
+import org.apache.spark.deploy.k8s.integrationtest.config._
+import org.apache.spark.deploy.k8s.integrationtest.docker.KubernetesSuiteDockerManager
 
-private[spark] class MinikubeTestBackend extends IntegrationTestBackend {
+private[spark] object MinikubeTestBackend extends IntegrationTestBackend {
   private var defaultClient: DefaultKubernetesClient = _
+  private val userProvidedDockerImageTag = Option(
+    System.getProperty(KUBERNETES_TEST_DOCKER_TAG_SYSTEM_PROPERTY))
+  private val dockerManager = new KubernetesSuiteDockerManager(
+    Minikube.getDockerEnv, userProvidedDockerImageTag)
 
   override def initialize(): Unit = {
-    Minikube.startMinikube()
-    if (!System.getProperty("spark.docker.test.skipBuildImages", "false").toBoolean) {
-      new SparkDockerImageBuilder(Minikube.getDockerEnv).buildSparkDockerImages()
-    }
+    val minikubeStatus = Minikube.getMinikubeStatus
+    require(minikubeStatus == MinikubeStatus.RUNNING,
+      s"Minikube must be running before integration tests can execute. Current status" +
+        s" is: $minikubeStatus")
+    dockerManager.buildSparkDockerImages()
     defaultClient = Minikube.getKubernetesClient
+  }
+
+  override def cleanUp(): Unit = {
+    super.cleanUp()
+    dockerManager.deleteImages()
   }
 
   override def getKubernetesClient(): DefaultKubernetesClient = {
     defaultClient
   }
 
-  override def cleanUp(): Unit = {
-    if (!System.getProperty("spark.docker.test.persistMinikube", "false").toBoolean) {
-      Minikube.deleteMinikube()
-    }
-  }
-
-  override def name(): String = MINIKUBE_TEST_BACKEND
+  override def dockerImageTag(): String = dockerManager.dockerImageTag()
 }

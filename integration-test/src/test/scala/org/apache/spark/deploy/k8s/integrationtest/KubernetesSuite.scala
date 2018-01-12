@@ -30,7 +30,9 @@ import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Minutes, Seconds, Span}
 
 import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackendFactory
-import org.apache.spark.deploy.k8s.integrationtest.constants.SPARK_DISTRO_PATH
+import org.apache.spark.deploy.k8s.integrationtest.backend.minikube.MinikubeTestBackend
+import org.apache.spark.deploy.k8s.integrationtest.constants._
+import org.apache.spark.deploy.k8s.integrationtest.config._
 
 private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll with BeforeAndAfter {
 
@@ -65,6 +67,9 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       .set("spark.kubernetes.driver.container.image", driverImage)
       .set("spark.kubernetes.executor.container.image", executorImage)
       .set("spark.kubernetes.driver.label.spark-app-locator", APP_LOCATOR_LABEL)
+      .set(DRIVER_DOCKER_IMAGE, tagImage("spark-driver"))
+      .set(EXECUTOR_DOCKER_IMAGE, tagImage("spark-executor"))
+      .set(INIT_CONTAINER_DOCKER_IMAGE, tagImage("spark-init"))
       .set("spark.kubernetes.executor.label.spark-app-locator", APP_LOCATOR_LABEL)
     kubernetesTestComponents.createNamespace()
     remoteExamplesJarUri = SparkExamplesFileServerRunner
@@ -76,15 +81,18 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   }
 
   test("Run SparkPi with no resources") {
+    doMinikubeCheck
     runSparkPiAndVerifyCompletion()
   }
 
   test("Run SparkPi with a very long application name.") {
+    doMinikubeCheck
     sparkAppConf.set("spark.app.name", "long" * 40)
     runSparkPiAndVerifyCompletion()
   }
 
   test("Run SparkPi with a master URL without a scheme.") {
+    doMinikubeCheck
     val url = kubernetesTestComponents.kubernetesClient.getMasterUrl
     val k8sMasterUrl = if (url.getPort < 0) {
       s"k8s://${url.getHost}"
@@ -105,6 +113,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   }
 
   test("Run SparkPi with custom driver pod name, labels, annotations, and environment variables.") {
+    doMinikubeCheck
     sparkAppConf
       .set("spark.kubernetes.driver.pod.name", "spark-integration-spark-pi")
       .set("spark.kubernetes.driver.label.label1", "label1-value")
@@ -251,6 +260,10 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       }
     }
   }
+  private def doMinikubeCheck(): Unit = {
+    assume(testBackend == MinikubeTestBackend)
+  }
+  private def tagImage(image: String): String = s"$image:${testBackend.dockerImageTag()}"
 
   private def doBasicDriverPodCheck(driverPod: Pod): Unit = {
     assert(driverPod.getSpec.getContainers.get(0).getImage === driverImage)
