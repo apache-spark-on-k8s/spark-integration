@@ -8,98 +8,71 @@ title: Spark on Kubernetes Integration Tests
 Note that the integration test framework is currently being heavily revised and
 is subject to change. Note that currently the integration tests only run with Java 8.
 
-As shorthand to run the tests against any given cluster, you can use the `e2e/runner.sh` script.
-The script assumes that you have a functioning Kubernetes cluster (1.6+) with kubectl
-configured to access it. The master URL of the currently configured cluster on your
-machine can be discovered as follows:
+The simplest way to run the integration tests is to install and run Minikube, then run the following:
 
-```
-$ kubectl cluster-info
+    build/mvn integration-test
+    
+The minimum tested version of Minikube is 0.23.0. The kube-dns addon must be enabled. Minikube should
+run with a minimum of 3 CPUs and 4G of memory:
 
-Kubernetes master is running at https://xyz
-```
+    minikube start --cpus 3 --memory 4G
 
-If you want to use a local [minikube](https://github.com/kubernetes/minikube) cluster,
-the minimum tested version is 0.23.0, with the kube-dns addon enabled
-and the recommended configuration is 3 CPUs and 4G of memory. There is also a wrapper
-script for running on minikube, `e2e/e2e-minikube.sh` for testing the master branch
-of the apache/spark repository in specific.
+You can download Minikube [here](https://github.com/kubernetes/minikube/releases).
 
-```
-$ minikube start --memory 4000 --cpus 3
-```
+# Integration test customization
 
-If you're using a non-local cluster, you must provide an image repository
-which you have write access to, using the `-i` option, in order to store docker images
-generated during the test.
+Configuration of the integration test runtime is done through passing different Java system properties to the Maven
+command. The main useful options are outlined below.
 
-Example usages of the script:
+## Use a non-local cluster
 
-```
-$ ./e2e/runner.sh -m https://xyz -i docker.io/foxish -d cloud
-$ ./e2e/runner.sh -m https://xyz -i test -d minikube
-$ ./e2e/runner.sh -m https://xyz -i test -r https://github.com/my-spark/spark -d minikube
-$ ./e2e/runner.sh -m https://xyz -i test -r https://github.com/my-spark/spark -b my-branch -d minikube
-```
+To use your own cluster running in the cloud, set the following:
 
-# Detailed Documentation
+* `spark.kubernetes.test.deployMode` to `cloud` to indicate that Minikube will not be used.
+* `spark.kubernetes.test.master` to your cluster's externally accessible URL
+* `spark.kubernetes.test.imageRepo` to a write-accessible Docker image repository that provides the images for your
+cluster. The framework assumes your local Docker client can push to this repository.
 
-## Running the tests using maven
+Therefore the command looks like this:
 
-Integration tests firstly require installing [Minikube](https://kubernetes.io/docs/getting-started-guides/minikube/) on
-your machine, and for the `Minikube` binary to be on your `PATH`.. Refer to the Minikube documentation for instructions
-on how to install it. It is recommended to allocate at least 8 CPUs and 8GB of memory to the Minikube cluster.
+    build/mvn integration-test \
+      -Dspark.kubernetes.test.deployMode=cloud \
+      -Dspark.kubernetes.test.master=https://example.com:8443/apiserver \
+      -Dspark.kubernetes.test.repo=docker.example.com/spark-images
+      
+## Re-using Docker Images
 
-Running the integration tests requires a Spark distribution package tarball that
-contains Spark jars, submission clients, etc. You can download a tarball from
-http://spark.apache.org/downloads.html. Or, you can create a distribution from
-source code using `make-distribution.sh`. For example:
+By default, the test framework will build new Docker images on every test execution. A unique image tag is generated,
+and it is written to file at `target/imageTag.txt`. To reuse the images built in a previous run, set:
 
-```
-$ git clone git@github.com:apache/spark.git
-$ cd spark
-$ ./dev/make-distribution.sh --tgz \
-     -Phadoop-2.7 -Pkubernetes -Pkinesis-asl -Phive -Phive-thriftserver
-```
+* `spark.kubernetes.test.imageTag` to the tag specified in `target/imageTag.txt`
+* `spark.kubernetes.test.skipBuildingImages` to `true`
 
-The above command will create a tarball like spark-2.3.0-SNAPSHOT-bin.tgz in the
-top-level dir. For more details, see the related section in
-[building-spark.md](https://github.com/apache/spark/blob/master/docs/building-spark.md#building-a-runnable-distribution)
+Therefore the command looks like this:
 
+    build/mvn integration-test \
+      -Dspark.kubernetes.test.imageTag=$(cat target/imageTag.txt) \
+      -Dspark.kubernetes.test.skipBuildingImages=true
 
-Once you prepare the tarball, the integration tests can be executed with Maven or
-your IDE. Note that when running tests from an IDE, the `pre-integration-test`
-phase must be run every time the Spark main code changes.  When running tests
-from the command line, the `pre-integration-test` phase should automatically be
-invoked if the `integration-test` phase is run.
+## Customizing the Spark Source Code to Test
 
-With Maven, the integration test can be run using the following command:
+By default, the test framework will test the master branch of Spark from [here](https://github.com/apache/spark). You
+can specify the following options to test against different source versions of Spark:
 
-```
-$ mvn clean integration-test  \
-    -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz
-```
+* `spark.kubernetes.test.sparkRepo` to the git or http URI of the Spark git repository to clone
+* `spark.kubernetes.test.sparkBranch` to the branch of the repository to build.
 
-## Running against an arbitrary cluster
+An example:
 
-In order to run against any cluster, use the following:
-```sh
-$ mvn clean integration-test  \
-    -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
-    -DextraScalaTestArgs="-Dspark.kubernetes.test.master=k8s://https://<master>
+    build/mvn integration-test \
+      -Dspark.kubernetes.test.sparkRepo=https://github.com/apache-spark-on-k8s/spark \
+      -Dspark.kubernetes.test.sparkBranch=new-feature
 
-## Reuse the previous Docker images
+Additionally, you can use a pre-built Spark distribution. In this case, the repository is not cloned at all, and no
+source code has to be compiled.
 
-The integration tests build a number of Docker images, which takes some time.
-By default, the images are built every time the tests run.  You may want to skip
-re-building those images during development, if the distribution package did not
-change since the last run. You can pass the property
-`spark.kubernetes.test.imageDockerTag` to the test process and specify the Docker 
-image tag that is appropriate.
-Here is an example:
+* `spark.kubernetes.test.sparkTgz` can be set to a tarball containing the Spark distribution to test.
 
-```
-$ mvn clean integration-test  \
-    -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
-    -Dspark.kubernetes.test.imageDockerTag=latest
-```
+When the tests are cloning a repository and building it, the Spark distribution is placed in
+`target/spark/spark-<VERSION>.tgz`. Reuse this tarball to save a significant amount of time if you are iterating on
+the development of these integration tests.
