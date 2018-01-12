@@ -46,6 +46,10 @@ $ ./e2e/runner.sh -m https://xyz -i test -r https://github.com/my-spark/spark -b
 
 ## Running the tests using maven
 
+Integration tests firstly require installing [Minikube](https://kubernetes.io/docs/getting-started-guides/minikube/) on
+your machine, and for the `Minikube` binary to be on your `PATH`.. Refer to the Minikube documentation for instructions
+on how to install it. It is recommended to allocate at least 8 CPUs and 8GB of memory to the Minikube cluster.
+
 Running the integration tests requires a Spark distribution package tarball that
 contains Spark jars, submission clients, etc. You can download a tarball from
 http://spark.apache.org/downloads.html. Or, you can create a distribution from
@@ -82,23 +86,7 @@ In order to run against any cluster, use the following:
 ```sh
 $ mvn clean integration-test  \
     -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
-    -DextraScalaTestArgs="-Dspark.kubernetes.test.master=k8s://https://<master> -Dspark.docker.test.driverImage=<driver-image> -Dspark.docker.test.executorImage=<executor-image>"
-```
-
-## Preserve the Minikube VM
-
-The integration tests make use of
-[Minikube](https://github.com/kubernetes/minikube), which fires up a virtual
-machine and setup a single-node kubernetes cluster within it. By default the vm
-is destroyed after the tests are finished.  If you want to preserve the vm, e.g.
-to reduce the running time of tests during development, you can pass the
-property `spark.docker.test.persistMinikube` to the test process:
-
-```
-$ mvn clean integration-test  \
-    -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
-    -DextraScalaTestArgs=-Dspark.docker.test.persistMinikube=true
-```
+    -DextraScalaTestArgs="-Dspark.kubernetes.test.master=k8s://https://<master>
 
 ## Reuse the previous Docker images
 
@@ -106,13 +94,12 @@ The integration tests build a number of Docker images, which takes some time.
 By default, the images are built every time the tests run.  You may want to skip
 re-building those images during development, if the distribution package did not
 change since the last run. You can pass the property
-`spark.docker.test.skipBuildImages` to the test process. This will work only if
-you have been setting the property `spark.docker.test.persistMinikube`, in the
-previous run since the docker daemon run inside the minikube environment.  Here
-is an example:
+`spark.kubernetes.test.imageDockerTag` to the test process and specify the Docker 
+image tag that is appropriate.
+Here is an example:
 
 ```
 $ mvn clean integration-test  \
     -Dspark-distro-tgz=spark/spark-2.3.0-SNAPSHOT-bin.tgz  \
-    "-DextraScalaTestArgs=-Dspark.docker.test.persistMinikube=true -Dspark.docker.test.skipBuildImages=true"
+    -Dspark.kubernetes.test.imageDockerTag=latest
 ```

@@ -14,25 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.spark.deploy.k8s.integrationtest
 
-package org.apache.spark.deploy.k8s.integrationtest.backend
-
-import io.fabric8.kubernetes.client.DefaultKubernetesClient
-
-import org.apache.spark.deploy.k8s.integrationtest.backend.GCE.GCETestBackend
-import org.apache.spark.deploy.k8s.integrationtest.backend.minikube.MinikubeTestBackend
-
-private[spark] trait IntegrationTestBackend {
-  def initialize(): Unit
-  def getKubernetesClient: DefaultKubernetesClient
-  def dockerImageTag(): String
-  def cleanUp(): Unit = {}
-}
-
-private[spark] object IntegrationTestBackendFactory {
-  def getTestBackend(): IntegrationTestBackend = {
-    Option(System.getProperty("spark.kubernetes.test.master"))
-      .map(new GCETestBackend(_))
-      .getOrElse(MinikubeTestBackend)
-  }
+package object config {
+  val KUBERNETES_TEST_DOCKER_TAG_SYSTEM_PROPERTY = "spark.kubernetes.test.imageDockerTag"
+  val DRIVER_DOCKER_IMAGE = "spark.kubernetes.driver.container.image"
+  val EXECUTOR_DOCKER_IMAGE = "spark.kubernetes.executor.container.image"
+  val INIT_CONTAINER_DOCKER_IMAGE = "spark.kubernetes.initcontainer.container.image"
 }
