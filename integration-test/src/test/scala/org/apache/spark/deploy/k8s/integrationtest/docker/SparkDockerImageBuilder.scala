@@ -43,6 +43,8 @@ private[spark] class SparkDockerImageBuilder
   private val dockerHost = dockerEnv.getOrElse("DOCKER_HOST",
       throw new IllegalStateException("DOCKER_HOST env not found."))
 
+  private val FILE_SERVER_BUILD_PATH = Paths.get("docker-file-server")
+
   private val originalDockerUri = URI.create(dockerHost)
   private val httpsDockerUri = new URIBuilder()
     .setHost(originalDockerUri.getHost)
@@ -68,6 +70,10 @@ private[spark] class SparkDockerImageBuilder
     buildImage("spark-driver", DRIVER_DOCKER_FILE)
     buildImage("spark-executor", EXECUTOR_DOCKER_FILE)
     buildImage("spark-init", INIT_CONTAINER_DOCKER_FILE)
+    dockerClient.build(
+      FILE_SERVER_BUILD_PATH,
+      "spark-examples-file-server",
+      new LoggingBuildHandler())
   }
 
   private def buildImage(

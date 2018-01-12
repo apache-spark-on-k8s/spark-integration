@@ -17,12 +17,12 @@
 package org.apache.spark.deploy.k8s.integrationtest
 
 import java.io.File
+import java.net.URI
 import java.nio.file.Paths
 import java.util.UUID
 import java.util.regex.Pattern
 
 import scala.collection.JavaConverters._
-
 import com.google.common.io.PatternFilenameFilter
 import io.fabric8.kubernetes.api.model.{Container, Pod}
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FunSuite}
@@ -39,6 +39,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   private val APP_LOCATOR_LABEL = UUID.randomUUID().toString.replaceAll("-", "")
   private var kubernetesTestComponents: KubernetesTestComponents = _
   private var sparkAppConf: SparkAppConf = _
+  private var remoteExamplesJarUri: URI = _
 
   private val driverImage = System.getProperty(
     "spark.docker.test.driverImage",
@@ -49,7 +50,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   private val initContainerImage = System.getProperty(
     "spark.docker.test.initContainerImage",
     "spark-init:latest")
-
 
   override def beforeAll(): Unit = {
     testBackend.initialize()
@@ -67,6 +67,8 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       .set("spark.kubernetes.driver.label.spark-app-locator", APP_LOCATOR_LABEL)
       .set("spark.kubernetes.executor.label.spark-app-locator", APP_LOCATOR_LABEL)
     kubernetesTestComponents.createNamespace()
+    remoteExamplesJarUri = SparkExamplesFileServerRunner
+      .launchServerAndGetUriForExamplesJar(kubernetesTestComponents)
   }
 
   after {
@@ -95,6 +97,11 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
   test("Run SparkPi with an argument.") {
     runSparkPiAndVerifyCompletion(appArgs = Array("5"))
+  }
+
+  test("Run SparkPi using the remote example jar.") {
+    sparkAppConf.set("spark.kubernetes.initContainer.image", initContainerImage)
+    runSparkPiAndVerifyCompletion(appResource = remoteExamplesJarUri.toString)
   }
 
   test("Run SparkPi with custom driver pod name, labels, annotations, and environment variables.") {
@@ -163,8 +170,8 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
     createTestSecret()
 
-    runSparkPageRankAndVerifyCompletion(
-      appArgs = Array(CONTAINER_LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE),
+    runSparkPiAndVerifyCompletion(
+      appResource = remoteExamplesJarUri.toString,
       driverPodChecker = (driverPod: Pod) => {
         doBasicDriverPodCheck(driverPod)
         checkTestSecret(driverPod, withInitContainer = true)
@@ -188,7 +195,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       driverPodChecker,
       executorPodChecker)
   }
-
   private def runSparkPageRankAndVerifyCompletion(
       appResource: String = CONTAINER_LOCAL_SPARK_DISTRO_EXAMPLES_JAR,
       driverPodChecker: Pod => Unit = doBasicDriverPodCheck,

@@ -1,5 +1,6 @@
 .idea/
 spark/
+spark
 integration-test/target/
 *.class
 *.log

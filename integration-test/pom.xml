@@ -135,7 +135,7 @@
               <executable>/bin/sh</executable>
               <arguments>
                 <argument>-c</argument>
-                <argument>rm -rf spark-distro; mkdir spark-distro-tmp; cd spark-distro-tmp; tar xfz ${spark-distro-tgz}; mv * ../spark-distro; cd ..; rm -rf spark-distro-tmp</argument>
+                <argument>rm -rf spark-distro; mkdir spark-distro-tmp; cd spark-distro-tmp; tar xfz ${spark-distro-tgz}; mv * ../spark-distro; cd ..; rm -rf spark-distro-tmp; rm -rf docker-file-server/jars; mkdir -p docker-file-server/jars; cp spark-distro/examples/jars/spark-examples*.jar docker-file-server/jars/.</argument>
               </arguments>
             </configuration>
           </execution>
