@@ -28,10 +28,6 @@ fi
 
 $SCRIPTS_DIR/write-docker-tag.sh --image-tag $IMAGE_TAG --image-tag-output-file $IMAGE_TAG_OUTPUT_FILE
 
-rm -f $IMAGE_TAG_OUTPUT_FILE
-touch $IMAGE_TAG_OUTPUT_FILE
-echo -n $IMAGE_TAG > $IMAGE_TAG_OUTPUT_FILE
-
 if [ ! -d "$UNPACKED_SPARK_TGZ" ];
 then
   echo "No unpacked distribution was found at $UNPACKED_SPARK_TGZ. Please run clone-spark.sh and build-spark.sh first." && exit 1;
