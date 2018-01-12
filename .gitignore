@@ -1,6 +1,4 @@
 .idea/
-spark/
-spark-dist
 target/
 build/*.jar
 build/apache-maven*
