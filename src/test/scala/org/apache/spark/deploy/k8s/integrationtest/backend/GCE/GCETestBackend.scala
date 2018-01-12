@@ -14,38 +14,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.spark.deploy.k8s.integrationtest.backend.minikube
+package org.apache.spark.deploy.k8s.integrationtest.backend.GCE
 
-import io.fabric8.kubernetes.client.DefaultKubernetesClient
+import io.fabric8.kubernetes.client.{ConfigBuilder, DefaultKubernetesClient}
 
+import org.apache.spark.deploy.k8s.integrationtest.Utils
 import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackend
 import org.apache.spark.deploy.k8s.integrationtest.config._
-import org.apache.spark.deploy.k8s.integrationtest.docker.KubernetesSuiteDockerManager
 
-private[spark] object MinikubeTestBackend extends IntegrationTestBackend {
+private[spark] class GCETestBackend(val master: String) extends IntegrationTestBackend {
   private var defaultClient: DefaultKubernetesClient = _
-  private val userProvidedDockerImageTag = Option(
-    System.getProperty(KUBERNETES_TEST_DOCKER_TAG_SYSTEM_PROPERTY))
-  private val dockerManager = new KubernetesSuiteDockerManager(
-    Minikube.getDockerEnv, userProvidedDockerImageTag)
 
   override def initialize(): Unit = {
-    val minikubeStatus = Minikube.getMinikubeStatus
-    require(minikubeStatus == MinikubeStatus.RUNNING,
-      s"Minikube must be running before integration tests can execute. Current status" +
-        s" is: $minikubeStatus")
-    dockerManager.buildSparkDockerImages()
-    defaultClient = Minikube.getKubernetesClient
-  }
-
-  override def cleanUp(): Unit = {
-    super.cleanUp()
-    dockerManager.deleteImages()
+    val k8sConf = new ConfigBuilder()
+      .withApiVersion("v1")
+      .withMasterUrl(Utils.checkAndGetK8sMasterUrl(master).replaceFirst("k8s://", ""))
+      .build()
+    defaultClient = new DefaultKubernetesClient(k8sConf)
   }
 
   override def getKubernetesClient(): DefaultKubernetesClient = {
     defaultClient
   }
-
-  override def dockerImageTag(): String = dockerManager.dockerImageTag()
 }

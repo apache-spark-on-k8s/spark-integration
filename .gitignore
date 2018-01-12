@@ -1,7 +1,12 @@
 .idea/
 spark/
-spark
-integration-test/target/
+spark-dist
+target/
+build/*.jar
+build/apache-maven*
+build/scala*
+build/zinc*
 *.class
 *.log
 *.iml
+*.swp

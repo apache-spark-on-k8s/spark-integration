@@ -1,5 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -14,23 +15,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-### This script can be used to run integration tests locally on minikube.
-### Requirements: minikube v0.23+ with the DNS addon enabled, and kubectl configured to point to it.
+#
 
 set -ex
+SCRIPTS_DIR=$(dirname $0)
+source "$SCRIPTS_DIR/parse-arguments.sh" "$@"
 
-### Basic Validation ###
-if [ ! -d "integration-test" ]; then
-  echo "This script must be invoked from the top-level directory of the integration-tests repository"
-  usage
-  exit 1
-fi
-
-# Set up config.
-master=$(kubectl cluster-info | head -n 1 | grep -oE "https?://[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]+)?")
-repo="https://github.com/apache/spark"
-image_repo=test
-
-# Run tests in minikube mode.
-./e2e/runner.sh -m $master -r $repo -i $image_repo -d minikube
+cd $SPARK_REPO_LOCAL_DIR
+rm -rf $UNPACKED_SPARK_TGZ
+mkdir -p $UNPACKED_SPARK_TGZ
+if [[ $SPARK_TGZ == "N/A" ]];
+then
+  ./dev/make-distribution.sh --tgz -Phadoop-2.7 -Pkubernetes -DskipTests;
+  tar -xzvf $SPARK_REPO_LOCAL_DIR/spark-*.tgz --strip-components=1 -C $UNPACKED_SPARK_TGZ;
+else
+  tar -xzvf $SPARK_TGZ --strip-components=1 -C $UNPACKED_SPARK_TGZ
+fi;

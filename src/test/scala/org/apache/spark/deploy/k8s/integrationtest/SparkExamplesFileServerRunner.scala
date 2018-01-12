@@ -25,8 +25,6 @@ import org.apache.http.client.utils.URIBuilder
 
 private[spark] object SparkExamplesFileServerRunner {
 
-  private val fileServerImage = System.getProperty(
-      "spark.docker.test.fileServerImage", "spark-examples-file-server:latest")
   private val fileServerExampleJarsDir = Paths.get("docker-file-server", "jars")
   require(
     fileServerExampleJarsDir
@@ -50,7 +48,10 @@ private[spark] object SparkExamplesFileServerRunner {
   private val fileServerName = "spark-examples-file-server"
 
   def launchServerAndGetUriForExamplesJar(
-    kubernetesTestComponents: KubernetesTestComponents): URI = {
+    kubernetesTestComponents: KubernetesTestComponents,
+    fileServerImageTag: String,
+    fileServerImageRepo: String): URI = {
+    val fileServerImage = s"$fileServerImageRepo/spark-examples-file-server:$fileServerImageTag"
     val podReadinessWatcher = new SparkReadinessWatcher[Pod]
     Utils.tryWithResource(
       kubernetesTestComponents

@@ -16,16 +16,13 @@
  */
 package org.apache.spark.deploy.k8s.integrationtest
 
-import java.nio.file.Paths
+import java.nio.file.{Path, Paths}
 import java.util.UUID
 
 import scala.collection.mutable
 import scala.collection.JavaConverters._
-
 import io.fabric8.kubernetes.client.DefaultKubernetesClient
 import org.scalatest.concurrent.Eventually
-
-import org.apache.spark.deploy.k8s.integrationtest.constants.SPARK_DISTRO_PATH
 
 private[spark] class KubernetesTestComponents(defaultClient: DefaultKubernetesClient) {
 
@@ -92,12 +89,14 @@ private[spark] case class SparkAppArguments(
 
 private[spark] object SparkAppLauncher extends Logging {
 
-  private val SPARK_SUBMIT_EXECUTABLE_DEST = Paths.get(SPARK_DISTRO_PATH.toFile.getAbsolutePath,
-      "bin", "spark-submit").toFile
-
-  def launch(appArguments: SparkAppArguments, appConf: SparkAppConf, timeoutSecs: Int): Unit = {
+  def launch(
+      appArguments: SparkAppArguments,
+      appConf: SparkAppConf,
+      timeoutSecs: Int,
+      sparkHomeDir: Path): Unit = {
+    val sparkSubmitExecutable = sparkHomeDir.resolve(Paths.get("bin", "spark-submit"))
     logInfo(s"Launching a spark app with arguments $appArguments and conf $appConf")
-    val commandLine = Array(SPARK_SUBMIT_EXECUTABLE_DEST.getAbsolutePath,
+    val commandLine = Array(sparkSubmitExecutable.toFile.getAbsolutePath,
         "--deploy-mode", "cluster",
         "--class", appArguments.mainClass,
         "--master", appConf.get("spark.master")

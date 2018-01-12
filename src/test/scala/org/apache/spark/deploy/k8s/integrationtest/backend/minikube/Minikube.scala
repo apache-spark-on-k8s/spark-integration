@@ -43,14 +43,6 @@ private[spark] object Minikube extends Logging {
         .getOrElse(throw new IllegalStateException(s"Unknown status $statusString"))
   }
 
-  def getDockerEnv: Map[String, String] = {
-    executeMinikube("docker-env", "--shell", "bash")
-        .filter(_.startsWith("export"))
-        .map(_.replaceFirst("export ", "").split('='))
-        .map(arr => (arr(0), arr(1).replaceAllLiterally("\"", "")))
-        .toMap
-  }
-
   def getKubernetesClient: DefaultKubernetesClient = {
     val kubernetesMaster = s"https://${getMinikubeIp}:8443"
     val userHome = System.getProperty("user.home")
@@ -62,10 +54,6 @@ private[spark] object Minikube extends Logging {
       .withClientKeyFile(Paths.get(userHome, ".minikube", "apiserver.key").toFile.getAbsolutePath)
       .build()
     new DefaultKubernetesClient(kubernetesConf)
-  }
-
-  def executeMinikubeSsh(command: String): Unit = {
-    executeMinikube("ssh", command)
   }
 
   private def executeMinikube(action: String, args: String*): Seq[String] = {
