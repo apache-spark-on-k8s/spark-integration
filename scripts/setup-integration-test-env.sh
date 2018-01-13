@@ -22,8 +22,8 @@ IMAGE_TAG_OUTPUT_FILE="$TEST_ROOT_DIR/target/image-tag.txt"
 DEPLOY_MODE=minikube
 IMAGE_REPO="docker.io/kubespark"
 SKIP_BUILDING_IMAGES=false
-SPARK_TGZ="N/A"
 IMAGE_TAG="N/A"
+SPARK_TGZ=
 
 # Parse arguments
 while (( "$#" )); do
@@ -63,7 +63,7 @@ while (( "$#" )); do
   shift
 done
 
-if [[ $SPARK_TGZ == "N/A" ]];
+if [ -z $SPARK_TGZ ];
 then
   echo "Must specify a Spark tarball to build Docker images against with --spark-tgz." && exit 1;
 fi
