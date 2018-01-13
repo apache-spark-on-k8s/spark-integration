@@ -21,7 +21,6 @@ UNPACKED_SPARK_TGZ="$TEST_ROOT_DIR/target/spark-dist-unpacked"
 IMAGE_TAG_OUTPUT_FILE="$TEST_ROOT_DIR/target/image-tag.txt"
 DEPLOY_MODE=minikube
 IMAGE_REPO="docker.io/kubespark"
-SKIP_BUILDING_IMAGES=false
 IMAGE_TAG="N/A"
 SPARK_TGZ=
 
@@ -52,10 +51,6 @@ while (( "$#" )); do
       SPARK_TGZ="$2"
       shift
       ;;
-    --skip-building-images)
-      SKIP_BUILDING_IMAGES="$2"
-      shift
-      ;;
     *)
       break
       ;;
@@ -75,10 +70,6 @@ tar -xzvf $SPARK_TGZ --strip-components=1 -C $UNPACKED_SPARK_TGZ;
 if [[ $IMAGE_TAG == "N/A" ]];
 then
   IMAGE_TAG=$(uuidgen);
-fi
-
-if [[ $SKIP_BUILDING_IMAGES == false ]] ;
-then
   cd $UNPACKED_SPARK_TGZ
   if [[ $DEPLOY_MODE == cloud ]] ;
   then

@@ -23,7 +23,6 @@ SPARK_REPO="https://github.com/apache/spark"
 SPARK_REPO_LOCAL_DIR="$TEST_ROOT_DIR/target/spark"
 DEPLOY_MODE=minikube
 IMAGE_REPO="docker.io/kubespark"
-SKIP_BUILDING_IMAGES=false
 SPARK_TGZ="N/A"
 IMAGE_TAG="N/A"
 MAVEN_ARGS=()
@@ -60,9 +59,6 @@ while (( "$#" )); do
       MAVEN_ARGS=("$2")
       shift
       ;;
-    --skip-building-images)
-      SKIP_BUILDING_IMAGES=true
-      ;;
     *)
       break
       ;;
@@ -96,7 +92,6 @@ if [ -z $SPARK_MASTER ];
 then
   build/mvn integration-test \
     -Dspark.kubernetes.test.sparkTgz=$SPARK_TGZ \
-    -Dspark.kubernetes.test.skipBuildingImages=$SKIP_BUILDING_IMAGES \
     -Dspark.kubernetes.test.imageTag=$IMAGE_TAG \
     -Dspark.kubernetes.test.imageRepo=$IMAGE_REPO \
     -Dspark.kubernetes.test.deployMode=$DEPLOY_MODE \
@@ -104,7 +99,6 @@ then
 else
   build/mvn integration-test \
     -Dspark.kubernetes.test.sparkTgz=$SPARK_TGZ \
-    -Dspark.kubernetes.test.skipBuildingImages=$SKIP_BUILDING_IMAGES \
     -Dspark.kubernetes.test.imageTag=$IMAGE_TAG \
     -Dspark.kubernetes.test.imageRepo=$IMAGE_REPO \
     -Dspark.kubernetes.test.deployMode=$DEPLOY_MODE \

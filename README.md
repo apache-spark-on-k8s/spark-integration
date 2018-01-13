@@ -41,16 +41,14 @@ Therefore the command looks like this:
 ## Re-using Docker Images
 
 By default, the test framework will build new Docker images on every test execution. A unique image tag is generated,
-and it is written to file at `target/imageTag.txt`. To reuse the images built in a previous run, pass these arguments:
+and it is written to file at `target/imageTag.txt`. To reuse the images built in a previous run, or to use a Docker image tag
+that you have built by other means already, pass the tag to the test script:
 
-* `--image-tag <tag>` - set `<tag>` to the tag specified in `target/imageTag.txt`
-* `--skip-building-images` to inform the framework to not build the images.
+    dev/dev-run-integration-tests.sh --image-tag <tag>
 
-Therefore the command looks like this:
+where if you still want to use images that were built before by the test framework:
 
-    dev/dev-run-integration-tests.sh \
-      --image-tag $(cat target/imageTag.txt) \
-      --skip-building-images
+    dev/dev-run-integration-tests.sh --image-tag $(cat target/imageTag.txt)
 
 ## Customizing the Spark Source Code to Test
 
@@ -72,6 +70,5 @@ source code has to be compiled.
 
 * `--spark-tgz <path-to-tgz>` - set `<path-to-tgz>` to point to a tarball containing the Spark distribution to test.
 
-When the tests are cloning a repository and building it, the Spark distribution is placed in
-`target/spark/spark-<VERSION>.tgz`. Reuse this tarball to save a significant amount of time if you are iterating on
-the development of these integration tests.
+When the tests are cloning a repository and building it, the Spark distribution is placed in `target/spark/spark-<VERSION>.tgz`.
+Reuse this tarball to save a significant amount of time if you are iterating on the development of these integration tests.
