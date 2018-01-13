@@ -21,8 +21,7 @@ You can download Minikube [here](https://github.com/kubernetes/minikube/releases
 
 # Integration test customization
 
-Configuration of the integration test runtime is done through passing different Java system properties to the Maven
-command. The main useful options are outlined below.
+Configuration of the integration test runtime is done through passing different arguments to the test script. The main useful options are outlined below.
 
 ## Use a non-local cluster
 
