@@ -45,7 +45,6 @@
     <spark.kubernetes.test.imageTagFile>${project.build.directory}/imageTag.txt</spark.kubernetes.test.imageTagFile>
     <spark.kubernetes.test.deployMode>minikube</spark.kubernetes.test.deployMode>
     <spark.kubernetes.test.imageRepo>docker.io/kubespark</spark.kubernetes.test.imageRepo>
-    <spark.kubernetes.test.skipBuildingImages>false</spark.kubernetes.test.skipBuildingImages>
     <test.exclude.tags></test.exclude.tags>
   </properties>
   <packaging>jar</packaging>
@@ -155,9 +154,6 @@
 
                 <argument>--spark-tgz</argument>
                 <argument>${spark.kubernetes.test.sparkTgz}</argument>
-
-                <argument>--skip-building-images</argument>
-                <argument>${spark.kubernetes.test.skipBuildingImages}</argument>
               </arguments>
             </configuration>
           </execution>
