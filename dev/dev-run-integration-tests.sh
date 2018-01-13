@@ -17,18 +17,17 @@
 # limitations under the License.
 #
 
-set -ex
 TEST_ROOT_DIR=$(git rev-parse --show-toplevel)
 BRANCH="master"
 SPARK_REPO="https://github.com/apache/spark"
 SPARK_REPO_LOCAL_DIR="$TEST_ROOT_DIR/target/spark"
-UNPACKED_SPARK_TGZ="$TEST_ROOT_DIR/target/spark-dist-unpacked"
-IMAGE_TAG_OUTPUT_FILE="$TEST_ROOT_DIR/target/image-tag.txt"
 DEPLOY_MODE=minikube
 IMAGE_REPO="docker.io/kubespark"
 SKIP_BUILDING_IMAGES=false
 SPARK_TGZ="N/A"
 IMAGE_TAG="N/A"
+MAVEN_ARGS=()
+SPARK_MASTER=
 
 # Parse arguments
 while (( "$#" )); do
@@ -41,24 +40,12 @@ while (( "$#" )); do
       SPARK_REPO="$2"
       shift
       ;;
-    --spark-repo-local-dir)
-      SPARK_REPO_LOCAL_DIR="$2"
-      shift
-      ;;
-    --unpacked-spark-tgz)
-      UNPACKED_SPARK_TGZ="$2"
-      shift
-      ;;
     --image-repo)
       IMAGE_REPO="$2"
       shift
       ;;
     --image-tag)
       IMAGE_TAG="$2"
-      shift
-      ;;
-    --image-tag-output-file)
-      IMAGE_TAG_OUTPUT_FILE="$2"
       shift
       ;;
     --deploy-mode)
@@ -69,9 +56,12 @@ while (( "$#" )); do
       SPARK_TGZ="$2"
       shift
       ;;
-    --skip-building-images)
-      SKIP_BUILDING_IMAGES="$2"
+    --maven-args)
+      MAVEN_ARGS=("$2")
       shift
+      ;;
+    --skip-building-images)
+      SKIP_BUILDING_IMAGES=true
       ;;
     *)
       break
@@ -80,3 +70,44 @@ while (( "$#" )); do
   shift
 done
 
+if [[ $SPARK_TGZ == "N/A" ]];
+then
+  echo "Cloning $SPARK_REPO into $SPARK_REPO_LOCAL_DIR and checking out $BRANCH."
+
+  # clone spark distribution if needed.
+  if [ -d "$SPARK_REPO_LOCAL_DIR" ];
+  then
+    (cd $SPARK_REPO_LOCAL_DIR && git fetch origin $branch);
+  else
+    mkdir -p $SPARK_REPO_LOCAL_DIR;
+    git clone -b $BRANCH --single-branch $SPARK_REPO $SPARK_REPO_LOCAL_DIR;
+  fi
+  cd $SPARK_REPO_LOCAL_DIR
+  git checkout -B $BRANCH origin/$branch
+  ./dev/make-distribution.sh --tgz -Phadoop-2.7 -Pkubernetes -DskipTests;
+  SPARK_TGZ=$(find $SPARK_REPO_LOCAL_DIR -name spark-*.tgz)
+  echo "Built Spark TGZ at $SPARK_TGZ".
+  cd -
+fi
+
+cd $TEST_ROOT_DIR
+
+if [ -z $SPARK_MASTER ];
+then
+  build/mvn integration-test \
+    -Dspark.kubernetes.test.sparkTgz=$SPARK_TGZ \
+    -Dspark.kubernetes.test.skipBuildingImages=$SKIP_BUILDING_IMAGES \
+    -Dspark.kubernetes.test.imageTag=$IMAGE_TAG \
+    -Dspark.kubernetes.test.imageRepo=$IMAGE_REPO \
+    -Dspark.kubernetes.test.deployMode=$DEPLOY_MODE \
+    "${MAVEN_ARGS[@]/#/-}";
+else
+  build/mvn integration-test \
+    -Dspark.kubernetes.test.sparkTgz=$SPARK_TGZ \
+    -Dspark.kubernetes.test.skipBuildingImages=$SKIP_BUILDING_IMAGES \
+    -Dspark.kubernetes.test.imageTag=$IMAGE_TAG \
+    -Dspark.kubernetes.test.imageRepo=$IMAGE_REPO \
+    -Dspark.kubernetes.test.deployMode=$DEPLOY_MODE \
+    -Dspark.kubernetes.test.master=$SPARK_MASTER \
+    "${MAVEN_ARGS[@]/#/-}";
+fi

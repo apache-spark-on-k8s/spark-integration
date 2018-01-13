@@ -40,15 +40,11 @@
     <scalatest-maven-plugin.version>1.0</scalatest-maven-plugin.version>
     <slf4j-log4j12.version>1.7.24</slf4j-log4j12.version>
     <sbt.project.name>kubernetes-integration-tests</sbt.project.name>
-    <spark.kubernetes.test.sparkTgz>N/A</spark.kubernetes.test.sparkTgz>
-    <spark.kubernetes.test.sparkRepo.localDir>${project.build.directory}/spark</spark.kubernetes.test.sparkRepo.localDir>
     <spark.kubernetes.test.unpackSparkDir>${project.build.directory}/spark-dist-unpacked</spark.kubernetes.test.unpackSparkDir>
-    <spark.kubernetes.test.sparkBranch>master</spark.kubernetes.test.sparkBranch>
     <spark.kubernetes.test.imageTag>N/A</spark.kubernetes.test.imageTag>
     <spark.kubernetes.test.imageTagFile>${project.build.directory}/imageTag.txt</spark.kubernetes.test.imageTagFile>
     <spark.kubernetes.test.deployMode>minikube</spark.kubernetes.test.deployMode>
     <spark.kubernetes.test.imageRepo>docker.io/kubespark</spark.kubernetes.test.imageRepo>
-    <spark.kubernetes.test.sparkRepo>https://github.com/apache/spark</spark.kubernetes.test.sparkRepo>
     <spark.kubernetes.test.skipBuildingImages>false</spark.kubernetes.test.skipBuildingImages>
     <test.exclude.tags></test.exclude.tags>
   </properties>
@@ -142,15 +138,6 @@
             <configuration>
               <executable>scripts/setup-integration-test-env.sh</executable>
               <arguments>
-                <argument>--spark-branch</argument>
-                <argument>${spark.kubernetes.test.sparkBranch}</argument>
-
-                <argument>--spark-repo</argument>
-                <argument>${spark.kubernetes.test.sparkRepo}</argument>
-
-                <argument>--spark-repo-local-dir</argument>
-                <argument>${spark.kubernetes.test.sparkRepo.localDir}</argument>
-
                 <argument>--unpacked-spark-tgz</argument>
                 <argument>${spark.kubernetes.test.unpackSparkDir}</argument>
 

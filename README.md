@@ -10,7 +10,7 @@ is subject to change. Note that currently the integration tests only run with Ja
 
 The simplest way to run the integration tests is to install and run Minikube, then run the following:
 
-    build/mvn integration-test
+    dev/dev-run-integration-tests.sh
 
 The minimum tested version of Minikube is 0.23.0. The kube-dns addon must be enabled. Minikube should
 run with a minimum of 3 CPUs and 4G of memory:
@@ -28,50 +28,50 @@ command. The main useful options are outlined below.
 
 To use your own cluster running in the cloud, set the following:
 
-* `spark.kubernetes.test.deployMode` to `cloud` to indicate that Minikube will not be used.
-* `spark.kubernetes.test.master` to your cluster's externally accessible URL
-* `spark.kubernetes.test.imageRepo` to a write-accessible Docker image repository that provides the images for your
-cluster. The framework assumes your local Docker client can push to this repository.
+* `--deploy-mode cloud` to indicate that the test is connecting to a remote cluster instead of Minikube,
+* `--spark-master <master-url>` - set `<master-url>` to the externally accessible Kubernetes cluster URL,
+* `--image-repo <repo>` - set `<repo>` to a write-accessible Docker image repository that provides the images for your cluster. The framework assumes your local Docker client can push to this repository.
 
 Therefore the command looks like this:
 
-    build/mvn integration-test \
-      -Dspark.kubernetes.test.deployMode=cloud \
-      -Dspark.kubernetes.test.master=https://example.com:8443/apiserver \
-      -Dspark.kubernetes.test.repo=docker.example.com/spark-images
+    dev/dev-run-integration-tests.sh \
+      --deploy-mode cloud \
+      --spark-master https://example.com:8443/apiserver \
+      --image-repo docker.example.com/spark-images
 
 ## Re-using Docker Images
 
 By default, the test framework will build new Docker images on every test execution. A unique image tag is generated,
-and it is written to file at `target/imageTag.txt`. To reuse the images built in a previous run, set:
+and it is written to file at `target/imageTag.txt`. To reuse the images built in a previous run, pass these arguments:
 
-* `spark.kubernetes.test.imageTag` to the tag specified in `target/imageTag.txt`
-* `spark.kubernetes.test.skipBuildingImages` to `true`
+* `--image-tag <tag>` - set `<tag>` to the tag specified in `target/imageTag.txt`
+* `--skip-building-images` to inform the framework to not build the images.
 
 Therefore the command looks like this:
 
-    build/mvn integration-test \
-      -Dspark.kubernetes.test.imageTag=$(cat target/imageTag.txt) \
-      -Dspark.kubernetes.test.skipBuildingImages=true
+    dev/dev-run-integration-tests.sh \
+      --image-tag $(cat target/imageTag.txt) \
+      --skip-building-images
 
 ## Customizing the Spark Source Code to Test
 
 By default, the test framework will test the master branch of Spark from [here](https://github.com/apache/spark). You
 can specify the following options to test against different source versions of Spark:
 
-* `spark.kubernetes.test.sparkRepo` to the git or http URI of the Spark git repository to clone
-* `spark.kubernetes.test.sparkBranch` to the branch of the repository to build.
+* `--spark-repo <repo>` - set `<repo>` to the git or http URI of the Spark git repository to clone
+* `--spark-branch <branch>` - set `<branch>` to the branch of the repository to build.
+
 
 An example:
 
-    build/mvn integration-test \
-      -Dspark.kubernetes.test.sparkRepo=https://github.com/apache-spark-on-k8s/spark \
-      -Dspark.kubernetes.test.sparkBranch=new-feature
+    dev/dev-run-integration-tests.sh \
+      --spark-repo https://github.com/apache-spark-on-k8s/spark \
+      --spark-branch new-feature
 
 Additionally, you can use a pre-built Spark distribution. In this case, the repository is not cloned at all, and no
 source code has to be compiled.
 
-* `spark.kubernetes.test.sparkTgz` can be set to a tarball containing the Spark distribution to test.
+* `--spark-tgz <path-to-tgz>` - set `<path-to-tgz> to point to a tarball containing the Spark distribution to test.
 
 When the tests are cloning a repository and building it, the Spark distribution is placed in
 `target/spark/spark-<VERSION>.tgz`. Reuse this tarball to save a significant amount of time if you are iterating on

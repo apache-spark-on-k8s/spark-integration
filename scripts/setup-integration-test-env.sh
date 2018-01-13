@@ -16,19 +16,86 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+TEST_ROOT_DIR=$(git rev-parse --show-toplevel)
+UNPACKED_SPARK_TGZ="$TEST_ROOT_DIR/target/spark-dist-unpacked"
+IMAGE_TAG_OUTPUT_FILE="$TEST_ROOT_DIR/target/image-tag.txt"
+DEPLOY_MODE=minikube
+IMAGE_REPO="docker.io/kubespark"
+SKIP_BUILDING_IMAGES=false
+SPARK_TGZ="N/A"
+IMAGE_TAG="N/A"
 
-SCRIPTS_DIR=$(dirname $0)
-source $SCRIPTS_DIR/parse-arguments.sh "$@"
+# Parse arguments
+while (( "$#" )); do
+  case $1 in
+    --unpacked-spark-tgz)
+      UNPACKED_SPARK_TGZ="$2"
+      shift
+      ;;
+    --image-repo)
+      IMAGE_REPO="$2"
+      shift
+      ;;
+    --image-tag)
+      IMAGE_TAG="$2"
+      shift
+      ;;
+    --image-tag-output-file)
+      IMAGE_TAG_OUTPUT_FILE="$2"
+      shift
+      ;;
+    --deploy-mode)
+      DEPLOY_MODE="$2"
+      shift
+      ;;
+    --spark-tgz)
+      SPARK_TGZ="$2"
+      shift
+      ;;
+    --skip-building-images)
+      SKIP_BUILDING_IMAGES="$2"
+      shift
+      ;;
+    *)
+      break
+      ;;
+  esac
+  shift
+done
 
 if [[ $SPARK_TGZ == "N/A" ]];
 then
-  $SCRIPTS_DIR/clone-spark.sh "$@";
+  echo "Must specify a Spark tarball to build Docker images against with --spark-tgz." && exit 1;
 fi
-$SCRIPTS_DIR/build-spark.sh "$@"
+
+rm -rf $UNPACKED_SPARK_TGZ
+mkdir -p $UNPACKED_SPARK_TGZ
+tar -xzvf $SPARK_TGZ --strip-components=1 -C $UNPACKED_SPARK_TGZ;
+
+if [[ $IMAGE_TAG == "N/A" ]];
+then
+  IMAGE_TAG=$(uuidgen);
+fi
 
 if [[ $SKIP_BUILDING_IMAGES == false ]] ;
 then
-  $SCRIPTS_DIR/prepare-docker-images.sh "$@";
-else
-  $SCRIPTS_DIR/write-docker-tag.sh "$@";
+  cd $UNPACKED_SPARK_TGZ
+  if [[ $DEPLOY_MODE == cloud ]] ;
+  then
+    $UNPACKED_SPARK_TGZ/bin/docker-image-tool.sh -r $IMAGE_REPO -t $IMAGE_TAG build
+    if  [[ $IMAGE_REPO == gcr.io* ]] ;
+    then
+      gcloud docker -- push $IMAGE_REPO/spark:$IMAGE_TAG
+    else
+      $UNPACKED_SPARK_TGZ/bin/docker-image-tool.sh -r $IMAGE_REPO -t $IMAGE_TAG push
+    fi
+  else
+    # -m option for minikube.
+    eval $(minikube docker-env)
+    $UNPACKED_SPARK_TGZ/bin/docker-image-tool.sh -m -r $IMAGE_REPO -t $IMAGE_TAG build
+  fi
+  cd -
 fi
+
+rm -f $IMAGE_TAG_OUTPUT_FILE
+echo -n $IMAGE_TAG > $IMAGE_TAG_OUTPUT_FILE
