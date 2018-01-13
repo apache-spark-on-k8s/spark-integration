@@ -25,7 +25,6 @@ DEPLOY_MODE=minikube
 IMAGE_REPO="docker.io/kubespark"
 SPARK_TGZ="N/A"
 IMAGE_TAG="N/A"
-MAVEN_ARGS=()
 SPARK_MASTER=
 
 # Parse arguments
@@ -53,10 +52,6 @@ while (( "$#" )); do
       ;;
     --spark-tgz)
       SPARK_TGZ="$2"
-      shift
-      ;;
-    --maven-args)
-      MAVEN_ARGS=("$2")
       shift
       ;;
     *)
@@ -95,7 +90,6 @@ then
     -Dspark.kubernetes.test.imageTag=$IMAGE_TAG \
     -Dspark.kubernetes.test.imageRepo=$IMAGE_REPO \
     -Dspark.kubernetes.test.deployMode=$DEPLOY_MODE \
-    "${MAVEN_ARGS[@]/#/-}";
 else
   build/mvn integration-test \
     -Dspark.kubernetes.test.sparkTgz=$SPARK_TGZ \
@@ -103,5 +97,4 @@ else
     -Dspark.kubernetes.test.imageRepo=$IMAGE_REPO \
     -Dspark.kubernetes.test.deployMode=$DEPLOY_MODE \
     -Dspark.kubernetes.test.master=$SPARK_MASTER \
-    "${MAVEN_ARGS[@]/#/-}";
 fi

@@ -15,7 +15,7 @@ The simplest way to run the integration tests is to install and run Minikube, th
 The minimum tested version of Minikube is 0.23.0. The kube-dns addon must be enabled. Minikube should
 run with a minimum of 3 CPUs and 4G of memory:
 
-    minikube start --cpus 3 --memory 4G
+    minikube start --cpus 3 --memory 4096
 
 You can download Minikube [here](https://github.com/kubernetes/minikube/releases).
 
