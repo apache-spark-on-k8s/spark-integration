@@ -70,7 +70,7 @@ An example:
 Additionally, you can use a pre-built Spark distribution. In this case, the repository is not cloned at all, and no
 source code has to be compiled.
 
-* `--spark-tgz <path-to-tgz>` - set `<path-to-tgz> to point to a tarball containing the Spark distribution to test.
+* `--spark-tgz <path-to-tgz>` - set `<path-to-tgz>` to point to a tarball containing the Spark distribution to test.
 
 When the tests are cloning a repository and building it, the Spark distribution is placed in
 `target/spark/spark-<VERSION>.tgz`. Reuse this tarball to save a significant amount of time if you are iterating on
