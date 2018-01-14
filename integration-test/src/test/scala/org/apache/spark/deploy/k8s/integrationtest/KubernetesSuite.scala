@@ -30,7 +30,6 @@ import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Minutes, Seconds, Span}
 
 import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackendFactory
-import org.apache.spark.deploy.k8s.integrationtest.backend.minikube.MinikubeTestBackend
 import org.apache.spark.deploy.k8s.integrationtest.constants._
 import org.apache.spark.deploy.k8s.integrationtest.config._
 
@@ -103,7 +102,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   }
 
   test("Run SparkPi with custom driver pod name, labels, annotations, and environment variables.") {
-    doMinikubeCheck
     sparkAppConf
       .set("spark.kubernetes.driver.pod.name", "spark-integration-spark-pi")
       .set("spark.kubernetes.driver.label.label1", "label1-value")
