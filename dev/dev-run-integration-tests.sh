@@ -89,12 +89,12 @@ then
     -Dspark.kubernetes.test.sparkTgz=$SPARK_TGZ \
     -Dspark.kubernetes.test.imageTag=$IMAGE_TAG \
     -Dspark.kubernetes.test.imageRepo=$IMAGE_REPO \
-    -Dspark.kubernetes.test.deployMode=$DEPLOY_MODE \
+    -Dspark.kubernetes.test.deployMode=$DEPLOY_MODE;
 else
   build/mvn integration-test \
     -Dspark.kubernetes.test.sparkTgz=$SPARK_TGZ \
     -Dspark.kubernetes.test.imageTag=$IMAGE_TAG \
     -Dspark.kubernetes.test.imageRepo=$IMAGE_REPO \
     -Dspark.kubernetes.test.deployMode=$DEPLOY_MODE \
-    -Dspark.kubernetes.test.master=$SPARK_MASTER \
+    -Dspark.kubernetes.test.master=$SPARK_MASTER;
 fi

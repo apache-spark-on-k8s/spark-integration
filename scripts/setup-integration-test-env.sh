@@ -82,7 +82,6 @@ then
     fi
   else
     # -m option for minikube.
-    eval $(minikube docker-env)
     $UNPACKED_SPARK_TGZ/bin/docker-image-tool.sh -m -r $IMAGE_REPO -t $IMAGE_TAG build
   fi
   cd -
