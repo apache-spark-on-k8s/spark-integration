@@ -19,7 +19,7 @@
 TEST_ROOT_DIR=$(git rev-parse --show-toplevel)
 UNPACKED_SPARK_TGZ="$TEST_ROOT_DIR/target/spark-dist-unpacked"
 IMAGE_TAG_OUTPUT_FILE="$TEST_ROOT_DIR/target/image-tag.txt"
-DEPLOY_MODE=minikube
+DEPLOY_MODE="minikube"
 IMAGE_REPO="docker.io/kubespark"
 IMAGE_TAG="N/A"
 SPARK_TGZ="N/A"
