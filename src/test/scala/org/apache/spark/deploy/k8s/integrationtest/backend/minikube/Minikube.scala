@@ -16,6 +16,7 @@
  */
 package org.apache.spark.deploy.k8s.integrationtest.backend.minikube
 
+import java.io.File
 import java.nio.file.Paths
 
 import io.fabric8.kubernetes.client.{ConfigBuilder, DefaultKubernetesClient}
@@ -24,6 +25,8 @@ import org.apache.spark.deploy.k8s.integrationtest.{Logging, ProcessUtils}
 
 // TODO support windows
 private[spark] object Minikube extends Logging {
+
+  private val MINIKUBE_EXECUTABLE_LOCATION = "/usr/local/bin/minikube"
   private val MINIKUBE_STARTUP_TIMEOUT_SECONDS = 60
 
   def getMinikubeIp: String = {
@@ -57,8 +60,15 @@ private[spark] object Minikube extends Logging {
   }
 
   private def executeMinikube(action: String, args: String*): Seq[String] = {
+    val minikubeBinary = new File(MINIKUBE_EXECUTABLE_LOCATION)
+    require(
+      minikubeBinary.isFile,
+      s"Minikube binary was not found at $MINIKUBE_EXECUTABLE_LOCATION.")
+    require(
+      minikubeBinary.canExecute,
+      s"Minikube binary at $MINIKUBE_EXECUTABLE_LOCATION is not executable.")
     ProcessUtils.executeProcess(
-      Array("minikube", action) ++ args, MINIKUBE_STARTUP_TIMEOUT_SECONDS)
+      Array("/usr/local/bin/minikube", action) ++ args, MINIKUBE_STARTUP_TIMEOUT_SECONDS)
   }
 }
 
