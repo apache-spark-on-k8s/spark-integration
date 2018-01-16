@@ -16,10 +16,7 @@
  */
 package org.apache.spark.deploy.k8s.integrationtest
 
-import java.nio.file.Paths
-
 package object constants {
   val MINIKUBE_TEST_BACKEND = "minikube"
   val GCE_TEST_BACKEND = "gce"
-  val SPARK_DISTRO_PATH = Paths.get("target", "spark-distro")
 }

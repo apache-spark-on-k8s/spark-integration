@@ -16,9 +16,23 @@
  */
 package org.apache.spark.deploy.k8s.integrationtest
 
+import java.io.File
+
+import com.google.common.base.Charsets
+import com.google.common.io.Files
+
 package object config {
-  val KUBERNETES_TEST_DOCKER_TAG_SYSTEM_PROPERTY = "spark.kubernetes.test.imageDockerTag"
-  val DRIVER_DOCKER_IMAGE = "spark.kubernetes.driver.container.image"
-  val EXECUTOR_DOCKER_IMAGE = "spark.kubernetes.executor.container.image"
-  val INIT_CONTAINER_DOCKER_IMAGE = "spark.kubernetes.initcontainer.container.image"
+  def getTestImageTag: String = {
+    val imageTagFileProp = System.getProperty("spark.kubernetes.test.imageTagFile")
+    require(imageTagFileProp != null, "Image tag file must be provided in system properties.")
+    val imageTagFile = new File(imageTagFileProp)
+    require(imageTagFile.isFile, s"No file found for image tag at ${imageTagFile.getAbsolutePath}.")
+    Files.toString(imageTagFile, Charsets.UTF_8).trim
+  }
+
+  def getTestImageRepo: String = {
+    val imageRepo = System.getProperty("spark.kubernetes.test.imageRepo")
+    require(imageRepo != null, "Image repo must be provided in system properties.")
+    imageRepo
+  }
 }

@@ -22,6 +22,7 @@
   <groupId>spark-kubernetes-integration-tests</groupId>
   <version>0.1-SNAPSHOT</version>
   <properties>
+    <maven.version>3.3.9</maven.version>
     <commons-lang3.version>3.5</commons-lang3.version>
     <commons-logging.version>1.1.1</commons-logging.version>
     <docker-client.version>5.0.2</docker-client.version>
@@ -39,7 +40,11 @@
     <scalatest-maven-plugin.version>1.0</scalatest-maven-plugin.version>
     <slf4j-log4j12.version>1.7.24</slf4j-log4j12.version>
     <sbt.project.name>kubernetes-integration-tests</sbt.project.name>
-    <spark-distro-tgz>YOUR-SPARK-DISTRO-TARBALL-HERE</spark-distro-tgz>
+    <spark.kubernetes.test.unpackSparkDir>${project.build.directory}/spark-dist-unpacked</spark.kubernetes.test.unpackSparkDir>
+    <spark.kubernetes.test.imageTag>N/A</spark.kubernetes.test.imageTag>
+    <spark.kubernetes.test.imageTagFile>${project.build.directory}/imageTag.txt</spark.kubernetes.test.imageTagFile>
+    <spark.kubernetes.test.deployMode>minikube</spark.kubernetes.test.deployMode>
+    <spark.kubernetes.test.imageRepo>docker.io/kubespark</spark.kubernetes.test.imageRepo>
     <test.exclude.tags></test.exclude.tags>
   </properties>
   <packaging>jar</packaging>
@@ -124,17 +129,31 @@
         <version>${exec-maven-plugin.version}</version>
         <executions>
           <execution>
-            <id>unpack-spark-distro</id>
+            <id>setup-integration-test-env</id>
             <phase>pre-integration-test</phase>
             <goals>
               <goal>exec</goal>
             </goals>
             <configuration>
-              <workingDirectory>${project.build.directory}</workingDirectory>
-              <executable>/bin/sh</executable>
+              <executable>scripts/setup-integration-test-env.sh</executable>
               <arguments>
-                <argument>-c</argument>
-                <argument>rm -rf spark-distro; mkdir spark-distro-tmp; cd spark-distro-tmp; tar xfz ${spark-distro-tgz}; mv * ../spark-distro; cd ..; rm -rf spark-distro-tmp</argument>
+                <argument>--unpacked-spark-tgz</argument>
+                <argument>${spark.kubernetes.test.unpackSparkDir}</argument>
+
+                <argument>--image-repo</argument>
+                <argument>${spark.kubernetes.test.imageRepo}</argument>
+
+                <argument>--image-tag</argument>
+                <argument>${spark.kubernetes.test.imageTag}</argument>
+
+                <argument>--image-tag-output-file</argument>
+                <argument>${spark.kubernetes.test.imageTagFile}</argument>
+
+                <argument>--deploy-mode</argument>
+                <argument>${spark.kubernetes.test.deployMode}</argument>
+
+                <argument>--spark-tgz</argument>
+                <argument>${spark.kubernetes.test.sparkTgz}</argument>
               </arguments>
             </configuration>
           </execution>
@@ -155,6 +174,9 @@
           <systemProperties>
             <log4j.configuration>file:src/test/resources/log4j.properties</log4j.configuration>
             <java.awt.headless>true</java.awt.headless>
+            <spark.kubernetes.test.imageTagFile>${spark.kubernetes.test.imageTagFile}</spark.kubernetes.test.imageTagFile>
+            <spark.kubernetes.test.unpackSparkDir>${spark.kubernetes.test.unpackSparkDir}</spark.kubernetes.test.unpackSparkDir>
+            <spark.kubernetes.test.imageRepo>${spark.kubernetes.test.imageRepo}</spark.kubernetes.test.imageRepo>
           </systemProperties>
           <tagsToExclude>${test.exclude.tags}</tagsToExclude>
         </configuration>

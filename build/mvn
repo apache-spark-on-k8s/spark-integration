@@ -1,5 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -14,23 +15,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-### This script can be used to run integration tests locally on minikube.
-### Requirements: minikube v0.23+ with the DNS addon enabled, and kubectl configured to point to it.
+BUILD_DIR=$(dirname $0)
 
-set -ex
+MVN_RUNNER=$BUILD_DIR/run-mvn
 
-### Basic Validation ###
-if [ ! -d "integration-test" ]; then
-  echo "This script must be invoked from the top-level directory of the integration-tests repository"
-  usage
-  exit 1
+if [ ! -f $MVN_RUNNER ];
+then
+  curl -s --progress-bar https://raw.githubusercontent.com/apache/spark/master/build/mvn > $MVN_RUNNER
+  chmod +x $MVN_RUNNER
 fi
-
-# Set up config.
-master=$(kubectl cluster-info | head -n 1 | grep -oE "https?://[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]+)?")
-repo="https://github.com/apache/spark"
-image_repo=test
-
-# Run tests in minikube mode.
-./e2e/runner.sh -m $master -r $repo -i $image_repo -d minikube
+source $MVN_RUNNER

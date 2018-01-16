@@ -17,12 +17,12 @@
 package org.apache.spark.deploy.k8s.integrationtest
 
 import java.io.File
-import java.nio.file.Paths
+import java.net.URI
+import java.nio.file.{Path, Paths}
 import java.util.UUID
 import java.util.regex.Pattern
 
 import scala.collection.JavaConverters._
-
 import com.google.common.io.PatternFilenameFilter
 import io.fabric8.kubernetes.api.model.{Container, Pod}
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FunSuite}
@@ -31,7 +31,6 @@ import org.scalatest.time.{Minutes, Seconds, Span}
 
 import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackendFactory
 import org.apache.spark.deploy.k8s.integrationtest.backend.minikube.MinikubeTestBackend
-import org.apache.spark.deploy.k8s.integrationtest.constants._
 import org.apache.spark.deploy.k8s.integrationtest.config._
 
 private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll with BeforeAndAfter {
@@ -39,21 +38,27 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   import KubernetesSuite._
   private val testBackend = IntegrationTestBackendFactory.getTestBackend()
   private val APP_LOCATOR_LABEL = UUID.randomUUID().toString.replaceAll("-", "")
+  private var sparkHomeDir: Path = _
   private var kubernetesTestComponents: KubernetesTestComponents = _
   private var sparkAppConf: SparkAppConf = _
-
-  private val driverImage = System.getProperty(
-    "spark.docker.test.driverImage",
-    "spark-driver:latest")
-  private val executorImage = System.getProperty(
-    "spark.docker.test.executorImage",
-    "spark-executor:latest")
-  private val initContainerImage = System.getProperty(
-    "spark.docker.test.initContainerImage",
-    "spark-init:latest")
-
+  private var image: String = _
+  private var containerLocalSparkDistroExamplesJar: String = _
 
   override def beforeAll(): Unit = {
+    val sparkDirProp = System.getProperty("spark.kubernetes.test.unpackSparkDir")
+    require(sparkDirProp != null, "Spark home directory must be provided in system properties.")
+    sparkHomeDir = Paths.get(sparkDirProp)
+    require(sparkHomeDir.toFile.isDirectory,
+      s"No directory found for spark home specified at $sparkHomeDir.")
+    val imageTag = getTestImageTag
+    val imageRepo = getTestImageRepo
+    image = s"$imageRepo/spark:$imageTag"
+
+    val sparkDistroExamplesJarFile: File = sparkHomeDir.resolve(Paths.get("examples", "jars"))
+      .toFile
+      .listFiles(new PatternFilenameFilter(Pattern.compile("^spark-examples_.*\\.jar$")))(0)
+    containerLocalSparkDistroExamplesJar = s"local:///opt/spark/examples/jars/" +
+      s"${sparkDistroExamplesJarFile.getName}"
     testBackend.initialize()
     kubernetesTestComponents = new KubernetesTestComponents(testBackend.getKubernetesClient)
   }
@@ -64,12 +69,8 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
   before {
     sparkAppConf = kubernetesTestComponents.newSparkAppConf()
-      .set("spark.kubernetes.driver.container.image", driverImage)
-      .set("spark.kubernetes.executor.container.image", executorImage)
+      .set("spark.kubernetes.container.image", image)
       .set("spark.kubernetes.driver.label.spark-app-locator", APP_LOCATOR_LABEL)
-      .set(DRIVER_DOCKER_IMAGE, tagImage("spark-driver"))
-      .set(EXECUTOR_DOCKER_IMAGE, tagImage("spark-executor"))
-      .set(INIT_CONTAINER_DOCKER_IMAGE, tagImage("spark-init"))
       .set("spark.kubernetes.executor.label.spark-app-locator", APP_LOCATOR_LABEL)
     kubernetesTestComponents.createNamespace()
   }
@@ -151,7 +152,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       .set("spark.kubernetes.mountDependencies.filesDownloadDir",
         CONTAINER_LOCAL_FILE_DOWNLOAD_PATH)
       .set("spark.files", REMOTE_PAGE_RANK_DATA_FILE)
-      .set("spark.kubernetes.initContainer.image", initContainerImage)
     runSparkPageRankAndVerifyCompletion(
       appArgs = Array(CONTAINER_LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE))
   }
@@ -164,7 +164,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       .set("spark.files", REMOTE_PAGE_RANK_DATA_FILE)
       .set(s"spark.kubernetes.driver.secrets.$TEST_SECRET_NAME", TEST_SECRET_MOUNT_PATH)
       .set(s"spark.kubernetes.executor.secrets.$TEST_SECRET_NAME", TEST_SECRET_MOUNT_PATH)
-      .set("spark.kubernetes.initContainer.image", initContainerImage)
 
     createTestSecret()
 
@@ -181,7 +180,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   }
 
   private def runSparkPiAndVerifyCompletion(
-      appResource: String = CONTAINER_LOCAL_SPARK_DISTRO_EXAMPLES_JAR,
+      appResource: String = containerLocalSparkDistroExamplesJar,
       driverPodChecker: Pod => Unit = doBasicDriverPodCheck,
       executorPodChecker: Pod => Unit = doBasicExecutorPodCheck,
       appArgs: Array[String] = Array.empty[String]): Unit = {
@@ -193,9 +192,8 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       driverPodChecker,
       executorPodChecker)
   }
-
   private def runSparkPageRankAndVerifyCompletion(
-      appResource: String = CONTAINER_LOCAL_SPARK_DISTRO_EXAMPLES_JAR,
+      appResource: String = containerLocalSparkDistroExamplesJar,
       driverPodChecker: Pod => Unit = doBasicDriverPodCheck,
       executorPodChecker: Pod => Unit = doBasicExecutorPodCheck,
       appArgs: Array[String]): Unit = {
@@ -219,7 +217,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       mainAppResource = appResource,
       mainClass = mainClass,
       appArgs = appArgs)
-    SparkAppLauncher.launch(appArguments, sparkAppConf, TIMEOUT.value.toSeconds.toInt)
+    SparkAppLauncher.launch(appArguments, sparkAppConf, TIMEOUT.value.toSeconds.toInt, sparkHomeDir)
 
     val driverPod = kubernetesTestComponents.kubernetesClient
       .pods()
@@ -250,15 +248,14 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       }
     }
   }
-  private def tagImage(image: String): String = s"$image:${testBackend.dockerImageTag()}"
 
   private def doBasicDriverPodCheck(driverPod: Pod): Unit = {
-    assert(driverPod.getSpec.getContainers.get(0).getImage === driverImage)
+    assert(driverPod.getSpec.getContainers.get(0).getImage === image)
     assert(driverPod.getSpec.getContainers.get(0).getName === "spark-kubernetes-driver")
   }
 
   private def doBasicExecutorPodCheck(executorPod: Pod): Unit = {
-    assert(executorPod.getSpec.getContainers.get(0).getImage === executorImage)
+    assert(executorPod.getSpec.getContainers.get(0).getImage === image)
     assert(executorPod.getSpec.getContainers.get(0).getName === "executor")
   }
 
@@ -318,12 +315,6 @@ private[spark] object KubernetesSuite {
 
   val TIMEOUT = PatienceConfiguration.Timeout(Span(2, Minutes))
   val INTERVAL = PatienceConfiguration.Interval(Span(2, Seconds))
-  val SPARK_DISTRO_EXAMPLES_JAR_FILE: File = Paths.get(SPARK_DISTRO_PATH.toFile.getAbsolutePath,
-    "examples", "jars")
-    .toFile
-    .listFiles(new PatternFilenameFilter(Pattern.compile("^spark-examples_.*\\.jar$")))(0)
-  val CONTAINER_LOCAL_SPARK_DISTRO_EXAMPLES_JAR: String = s"local:///opt/spark/examples/jars/" +
-    s"${SPARK_DISTRO_EXAMPLES_JAR_FILE.getName}"
   val SPARK_PI_MAIN_CLASS: String = "org.apache.spark.examples.SparkPi"
   val SPARK_PAGE_RANK_MAIN_CLASS: String = "org.apache.spark.examples.SparkPageRank"
 

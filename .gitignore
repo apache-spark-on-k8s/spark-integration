@@ -1,6 +1,11 @@
 .idea/
-spark/
-integration-test/target/
+target/
+build/*.jar
+build/apache-maven*
+build/scala*
+build/zinc*
+build/run-mvn
 *.class
 *.log
 *.iml
+*.swp

@@ -16,6 +16,7 @@
  */
 package org.apache.spark.deploy.k8s.integrationtest.backend.minikube
 
+import java.io.File
 import java.nio.file.Paths
 
 import io.fabric8.kubernetes.client.{ConfigBuilder, DefaultKubernetesClient}
@@ -24,6 +25,7 @@ import org.apache.spark.deploy.k8s.integrationtest.{Logging, ProcessUtils}
 
 // TODO support windows
 private[spark] object Minikube extends Logging {
+
   private val MINIKUBE_STARTUP_TIMEOUT_SECONDS = 60
 
   def getMinikubeIp: String = {
@@ -43,14 +45,6 @@ private[spark] object Minikube extends Logging {
         .getOrElse(throw new IllegalStateException(s"Unknown status $statusString"))
   }
 
-  def getDockerEnv: Map[String, String] = {
-    executeMinikube("docker-env", "--shell", "bash")
-        .filter(_.startsWith("export"))
-        .map(_.replaceFirst("export ", "").split('='))
-        .map(arr => (arr(0), arr(1).replaceAllLiterally("\"", "")))
-        .toMap
-  }
-
   def getKubernetesClient: DefaultKubernetesClient = {
     val kubernetesMaster = s"https://${getMinikubeIp}:8443"
     val userHome = System.getProperty("user.home")
@@ -64,13 +58,9 @@ private[spark] object Minikube extends Logging {
     new DefaultKubernetesClient(kubernetesConf)
   }
 
-  def executeMinikubeSsh(command: String): Unit = {
-    executeMinikube("ssh", command)
-  }
-
   private def executeMinikube(action: String, args: String*): Seq[String] = {
     ProcessUtils.executeProcess(
-      Array("minikube", action) ++ args, MINIKUBE_STARTUP_TIMEOUT_SECONDS)
+      Array("bash", "-c", s"minikube $action") ++ args, MINIKUBE_STARTUP_TIMEOUT_SECONDS)
   }
 }
 
