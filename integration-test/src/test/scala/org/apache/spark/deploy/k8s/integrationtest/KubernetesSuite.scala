@@ -30,7 +30,6 @@ import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Minutes, Seconds, Span}
 
 import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackendFactory
-import org.apache.spark.deploy.k8s.integrationtest.backend.minikube.MinikubeTestBackend
 import org.apache.spark.deploy.k8s.integrationtest.constants._
 import org.apache.spark.deploy.k8s.integrationtest.config._
 
