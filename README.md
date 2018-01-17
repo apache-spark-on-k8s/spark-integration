@@ -78,4 +78,5 @@ Reuse this tarball to save a significant amount of time if you are iterating on 
 * `--namespace <namespace>` - set `<namespace>` to the namespace in which the tests should be run.
 * `--service-account <service account name>` - set `<service account name>` to the name of the Kubernetes service account to
 use in the namespace specified by the `--namespace`. The service account is expected to have permissions to get, list, watch,
-and create pods. A reference RBAC configuration is provided in `dev/spark-rbac.yaml`.
+and create pods. For clusters with RBAC turned on, it's important that the right permissions are granted to the service account
+in the namespace through an appropriate role and role binding. A reference RBAC configuration is provided in `dev/spark-rbac.yaml`.

@@ -30,8 +30,12 @@ private[spark] trait IntegrationTestBackend {
 
 private[spark] object IntegrationTestBackendFactory {
   def getTestBackend: IntegrationTestBackend = {
-    Option(System.getProperty("spark.kubernetes.test.master"))
-      .map(new GCETestBackend(_))
-      .getOrElse(MinikubeTestBackend)
+    val deployMode = Option(System.getProperty("spark.kubernetes.test.deployMode"))
+      .getOrElse("minikube")
+    if (deployMode == "minikube") {
+      MinikubeTestBackend
+    } else {
+      new GCETestBackend()
+    }
   }
 }
