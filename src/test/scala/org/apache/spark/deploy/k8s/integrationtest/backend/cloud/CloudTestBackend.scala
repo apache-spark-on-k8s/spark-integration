@@ -14,14 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.spark.deploy.k8s.integrationtest.backend.GCE
+package org.apache.spark.deploy.k8s.integrationtest.backend.cloud
 
 import io.fabric8.kubernetes.client.{ConfigBuilder, DefaultKubernetesClient}
 
 import org.apache.spark.deploy.k8s.integrationtest.Utils
 import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackend
 
-private[spark] class GCETestBackend() extends IntegrationTestBackend {
+private[spark] object CloudTestBackend extends IntegrationTestBackend {
 
   private var defaultClient: DefaultKubernetesClient = _
 
