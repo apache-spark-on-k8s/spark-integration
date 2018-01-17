@@ -21,6 +21,8 @@ import java.net.URI
 import java.nio.file.{Path, Paths}
 import java.util.UUID
 import java.util.regex.Pattern
+import java.sql.DriverManager
+import org.apache.hive.jdbc.HiveDriver
 
 import scala.collection.JavaConverters._
 import com.google.common.io.PatternFilenameFilter
@@ -101,6 +103,10 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
   test("Run SparkPi with an argument.") {
     runSparkPiAndVerifyCompletion(appArgs = Array("5"))
+  }
+
+  test("Run Spark ThriftServer") {
+    runThriftServerAndVerifyQuery()
   }
 
   test("Run SparkPi with custom driver pod name, labels, annotations, and environment variables.") {
@@ -204,6 +210,41 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       appArgs,
       driverPodChecker,
       executorPodChecker)
+  }
+
+  private def runThriftServerAndVerifyQuery(
+                                             driverPodChecker: Pod => Unit = doBasicDriverPodCheck,
+                                             appArgs: Array[String] = Array.empty[String]): Unit = {
+    val appArguments = SparkAppArguments(
+      mainAppResource = "",
+      mainClass = "org.apache.spark.sql.hive.thriftserver.HiveThriftServer2",
+      appArgs = appArgs)
+    SparkAppLauncher.launch(appArguments, sparkAppConf, TIMEOUT.value.toSeconds.toInt, sparkHomeDir)
+    val driverPod = kubernetesTestComponents.kubernetesClient
+      .pods
+      .withLabel("spark-app-locator", APP_LOCATOR_LABEL)
+      .withLabel("spark-role", "driver")
+      .list()
+      .getItems
+      .get(0)
+    driverPodChecker(driverPod)
+
+    val driverPodResource = kubernetesTestComponents.kubernetesClient
+        .pods
+        .withName(driverPod.getMetadata.getName)
+    driverPodResource.portForward(10000,10000)
+    val jdbcUri = s"jdbc:hive2://localhost:10000/"
+    val connection = DriverManager.getConnection(jdbcUri, "user", "pass")
+    val statement = connection.createStatement()
+    try {
+      val resultSet = statement.executeQuery("select 42")
+      resultSet.next()
+      assert(resultSet.getInt(1) == 42)
+    } finally {
+      statement.close()
+      connection.close()
+      driverPodResource.delete()
+    }
   }
 
   private def runSparkApplicationAndVerifyCompletion(
