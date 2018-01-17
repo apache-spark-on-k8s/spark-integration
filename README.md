@@ -72,3 +72,10 @@ source code has to be compiled.
 
 When the tests are cloning a repository and building it, the Spark distribution is placed in `target/spark/spark-<VERSION>.tgz`.
 Reuse this tarball to save a significant amount of time if you are iterating on the development of these integration tests.
+
+## Customizing the Namespace and Service Account
+
+* `--namespace <namespace>` - set `<namespace>` to the namespace in which the tests should be run.
+* `--service-account <service account name>` - set `<service account name>` to the name of the Kubernetes service account to
+use in the namespace specified by the `--namespace`. The service account is expected to have permissions to get, list, watch,
+and create pods. A reference RBAC configuration is provided in `dev/spark-rbac.yaml`.

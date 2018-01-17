@@ -29,7 +29,7 @@ private[spark] trait IntegrationTestBackend {
 }
 
 private[spark] object IntegrationTestBackendFactory {
-  def getTestBackend(): IntegrationTestBackend = {
+  def getTestBackend: IntegrationTestBackend = {
     Option(System.getProperty("spark.kubernetes.test.master"))
       .map(new GCETestBackend(_))
       .getOrElse(MinikubeTestBackend)

@@ -20,7 +20,6 @@ import io.fabric8.kubernetes.client.{ConfigBuilder, DefaultKubernetesClient}
 
 import org.apache.spark.deploy.k8s.integrationtest.Utils
 import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackend
-import org.apache.spark.deploy.k8s.integrationtest.config._
 
 private[spark] class GCETestBackend(val master: String) extends IntegrationTestBackend {
   private var defaultClient: DefaultKubernetesClient = _
@@ -33,7 +32,7 @@ private[spark] class GCETestBackend(val master: String) extends IntegrationTestB
     defaultClient = new DefaultKubernetesClient(k8sConf)
   }
 
-  override def getKubernetesClient(): DefaultKubernetesClient = {
+  override def getKubernetesClient: DefaultKubernetesClient = {
     defaultClient
   }
 }

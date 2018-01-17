@@ -17,7 +17,6 @@
 package org.apache.spark.deploy.k8s.integrationtest
 
 import java.io.File
-import java.net.URI
 import java.nio.file.{Path, Paths}
 import java.util.UUID
 import java.util.regex.Pattern
@@ -29,22 +28,32 @@ import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FunSuite}
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Minutes, Seconds, Span}
 
-import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackendFactory
-import org.apache.spark.deploy.k8s.integrationtest.backend.minikube.MinikubeTestBackend
+import org.apache.spark.deploy.k8s.integrationtest.backend.{IntegrationTestBackend, IntegrationTestBackendFactory}
 import org.apache.spark.deploy.k8s.integrationtest.config._
 
 private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll with BeforeAndAfter {
 
   import KubernetesSuite._
-  private val testBackend = IntegrationTestBackendFactory.getTestBackend()
-  private val APP_LOCATOR_LABEL = UUID.randomUUID().toString.replaceAll("-", "")
+
+  private var testBackend: IntegrationTestBackend = _
   private var sparkHomeDir: Path = _
   private var kubernetesTestComponents: KubernetesTestComponents = _
   private var sparkAppConf: SparkAppConf = _
   private var image: String = _
   private var containerLocalSparkDistroExamplesJar: String = _
+  private var appLocator: String = _
+  private var driverPodName: String = _
 
   override def beforeAll(): Unit = {
+    // The scalatest-maven-plugin gives system properties that are referenced but not set null
+    // values. We need to remove the null-value properties before initializing the test backend.
+    val nullValueProperties = System.getProperties.asScala
+      .filter(entry => entry._2.equals("null"))
+      .map(entry => entry._1.toString)
+    nullValueProperties.foreach { key =>
+      System.clearProperty(key)
+    }
+
     val sparkDirProp = System.getProperty("spark.kubernetes.test.unpackSparkDir")
     require(sparkDirProp != null, "Spark home directory must be provided in system properties.")
     sparkHomeDir = Paths.get(sparkDirProp)
@@ -59,6 +68,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       .listFiles(new PatternFilenameFilter(Pattern.compile("^spark-examples_.*\\.jar$")))(0)
     containerLocalSparkDistroExamplesJar = s"local:///opt/spark/examples/jars/" +
       s"${sparkDistroExamplesJarFile.getName}"
+    testBackend = IntegrationTestBackendFactory.getTestBackend
     testBackend.initialize()
     kubernetesTestComponents = new KubernetesTestComponents(testBackend.getKubernetesClient)
   }
@@ -68,15 +78,23 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   }
 
   before {
+    appLocator = UUID.randomUUID().toString.replaceAll("-", "")
+    driverPodName = "spark-test-app-" + UUID.randomUUID().toString.replaceAll("-", "")
     sparkAppConf = kubernetesTestComponents.newSparkAppConf()
       .set("spark.kubernetes.container.image", image)
-      .set("spark.kubernetes.driver.label.spark-app-locator", APP_LOCATOR_LABEL)
-      .set("spark.kubernetes.executor.label.spark-app-locator", APP_LOCATOR_LABEL)
-    kubernetesTestComponents.createNamespace()
+      .set("spark.kubernetes.driver.pod.name", driverPodName)
+      .set("spark.kubernetes.driver.label.spark-app-locator", appLocator)
+      .set("spark.kubernetes.executor.label.spark-app-locator", appLocator)
+    if (!kubernetesTestComponents.hasUserSpecifiedNamespace) {
+      kubernetesTestComponents.createNamespace()
+    }
   }
 
   after {
-    kubernetesTestComponents.deleteNamespace()
+    if (!kubernetesTestComponents.hasUserSpecifiedNamespace) {
+      kubernetesTestComponents.deleteNamespace()
+    }
+    deleteDriverPod()
   }
 
   test("Run SparkPi with no resources") {
@@ -103,9 +121,8 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     runSparkPiAndVerifyCompletion(appArgs = Array("5"))
   }
 
-  test("Run SparkPi with custom driver pod name, labels, annotations, and environment variables.") {
+  test("Run SparkPi with custom labels, annotations, and environment variables.") {
     sparkAppConf
-      .set("spark.kubernetes.driver.pod.name", "spark-integration-spark-pi")
       .set("spark.kubernetes.driver.label.label1", "label1-value")
       .set("spark.kubernetes.driver.label.label2", "label2-value")
       .set("spark.kubernetes.driver.annotation.annotation1", "annotation1-value")
@@ -122,7 +139,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     runSparkPiAndVerifyCompletion(
       driverPodChecker = (driverPod: Pod) => {
         doBasicDriverPodCheck(driverPod)
-        assert(driverPod.getMetadata.getName === "spark-integration-spark-pi")
         checkCustomSettings(driverPod)
       },
       executorPodChecker = (executorPod: Pod) => {
@@ -132,19 +148,26 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   }
 
   test("Run SparkPi with a test secret mounted into the driver and executor pods") {
-    createTestSecret()
+    val secretName = TEST_SECRET_NAME_PREFIX + UUID.randomUUID().toString.replaceAll("-", "")
+    createTestSecret(secretName)
+
     sparkAppConf
-      .set(s"spark.kubernetes.driver.secrets.$TEST_SECRET_NAME", TEST_SECRET_MOUNT_PATH)
-      .set(s"spark.kubernetes.executor.secrets.$TEST_SECRET_NAME", TEST_SECRET_MOUNT_PATH)
-    runSparkPiAndVerifyCompletion(
-      driverPodChecker = (driverPod: Pod) => {
-        doBasicDriverPodCheck(driverPod)
-        checkTestSecret(driverPod)
-      },
-      executorPodChecker = (executorPod: Pod) => {
-        doBasicExecutorPodCheck(executorPod)
-        checkTestSecret(executorPod)
-      })
+      .set(s"spark.kubernetes.driver.secrets.$secretName", TEST_SECRET_MOUNT_PATH)
+      .set(s"spark.kubernetes.executor.secrets.$secretName", TEST_SECRET_MOUNT_PATH)
+
+    try {
+      runSparkPiAndVerifyCompletion(
+        driverPodChecker = (driverPod: Pod) => {
+          doBasicDriverPodCheck(driverPod)
+          checkTestSecret(secretName, driverPod)
+        },
+        executorPodChecker = (executorPod: Pod) => {
+          doBasicExecutorPodCheck(executorPod)
+          checkTestSecret(secretName, executorPod)
+        })
+    } finally {
+      deleteTestSecret(secretName)
+    }
   }
 
   test("Run PageRank using remote data file") {
@@ -158,52 +181,62 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
   test("Run PageRank using remote data file with test secret mounted into the driver and " +
     "executors") {
+    val secretName = TEST_SECRET_NAME_PREFIX + UUID.randomUUID().toString.replaceAll("-", "")
+    createTestSecret(secretName)
+
     sparkAppConf
       .set("spark.kubernetes.mountDependencies.filesDownloadDir",
         CONTAINER_LOCAL_FILE_DOWNLOAD_PATH)
       .set("spark.files", REMOTE_PAGE_RANK_DATA_FILE)
-      .set(s"spark.kubernetes.driver.secrets.$TEST_SECRET_NAME", TEST_SECRET_MOUNT_PATH)
-      .set(s"spark.kubernetes.executor.secrets.$TEST_SECRET_NAME", TEST_SECRET_MOUNT_PATH)
+      .set(s"spark.kubernetes.driver.secrets.$secretName", TEST_SECRET_MOUNT_PATH)
+      .set(s"spark.kubernetes.executor.secrets.$secretName", TEST_SECRET_MOUNT_PATH)
 
-    createTestSecret()
-
-    runSparkPageRankAndVerifyCompletion(
-      appArgs = Array(CONTAINER_LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE),
-      driverPodChecker = (driverPod: Pod) => {
-        doBasicDriverPodCheck(driverPod)
-        checkTestSecret(driverPod, withInitContainer = true)
-      },
-      executorPodChecker = (executorPod: Pod) => {
-        doBasicExecutorPodCheck(executorPod)
-        checkTestSecret(executorPod, withInitContainer = true)
-      })
+    try {
+      runSparkPageRankAndVerifyCompletion(
+        appArgs = Array(CONTAINER_LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE),
+        driverPodChecker = (driverPod: Pod) => {
+          doBasicDriverPodCheck(driverPod)
+          checkTestSecret(secretName, driverPod, withInitContainer = true)
+        },
+        executorPodChecker = (executorPod: Pod) => {
+          doBasicExecutorPodCheck(executorPod)
+          checkTestSecret(secretName, executorPod, withInitContainer = true)
+        })
+    } finally {
+      deleteTestSecret(secretName)
+    }
   }
 
   private def runSparkPiAndVerifyCompletion(
       appResource: String = containerLocalSparkDistroExamplesJar,
       driverPodChecker: Pod => Unit = doBasicDriverPodCheck,
       executorPodChecker: Pod => Unit = doBasicExecutorPodCheck,
-      appArgs: Array[String] = Array.empty[String]): Unit = {
+      appArgs: Array[String] = Array.empty[String],
+      appLocator: String = appLocator): Unit = {
     runSparkApplicationAndVerifyCompletion(
       appResource,
       SPARK_PI_MAIN_CLASS,
       Seq("Pi is roughly 3"),
       appArgs,
       driverPodChecker,
-      executorPodChecker)
+      executorPodChecker,
+      appLocator)
   }
+
   private def runSparkPageRankAndVerifyCompletion(
       appResource: String = containerLocalSparkDistroExamplesJar,
       driverPodChecker: Pod => Unit = doBasicDriverPodCheck,
       executorPodChecker: Pod => Unit = doBasicExecutorPodCheck,
-      appArgs: Array[String]): Unit = {
+      appArgs: Array[String],
+      appLocator: String = appLocator): Unit = {
     runSparkApplicationAndVerifyCompletion(
       appResource,
       SPARK_PAGE_RANK_MAIN_CLASS,
       Seq("1 has rank", "2 has rank", "3 has rank", "4 has rank"),
       appArgs,
       driverPodChecker,
-      executorPodChecker)
+      executorPodChecker,
+      appLocator)
   }
 
   private def runSparkApplicationAndVerifyCompletion(
@@ -212,7 +245,8 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       expectedLogOnCompletion: Seq[String],
       appArgs: Array[String],
       driverPodChecker: Pod => Unit,
-      executorPodChecker: Pod => Unit): Unit = {
+      executorPodChecker: Pod => Unit,
+      appLocator: String): Unit = {
     val appArguments = SparkAppArguments(
       mainAppResource = appResource,
       mainClass = mainClass,
@@ -221,7 +255,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
     val driverPod = kubernetesTestComponents.kubernetesClient
       .pods()
-      .withLabel("spark-app-locator", APP_LOCATOR_LABEL)
+      .withLabel("spark-app-locator", appLocator)
       .withLabel("spark-role", "driver")
       .list()
       .getItems
@@ -230,7 +264,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
     val executorPods = kubernetesTestComponents.kubernetesClient
       .pods()
-      .withLabel("spark-app-locator", APP_LOCATOR_LABEL)
+      .withLabel("spark-app-locator", appLocator)
       .withLabel("spark-role", "executor")
       .list()
       .getItems
@@ -250,6 +284,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
   }
 
   private def doBasicDriverPodCheck(driverPod: Pod): Unit = {
+    assert(driverPod.getMetadata.getName === driverPodName)
     assert(driverPod.getSpec.getContainers.get(0).getImage === image)
     assert(driverPod.getSpec.getContainers.get(0).getName === "spark-kubernetes-driver")
   }
@@ -277,37 +312,59 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     assert(envVars("ENV2") === "VALUE2")
   }
 
-  private def createTestSecret(): Unit = {
-    testBackend.getKubernetesClient.secrets
+  private def deleteDriverPod(): Unit = {
+    kubernetesTestComponents.kubernetesClient.pods().withName(driverPodName).delete()
+    Eventually.eventually(TIMEOUT, INTERVAL) {
+      assert(kubernetesTestComponents.kubernetesClient
+        .pods()
+        .withName(driverPodName)
+        .get() == null)
+    }
+  }
+
+  private def createTestSecret(secretName: String): Unit = {
+    kubernetesTestComponents.kubernetesClient.secrets
       .createNew()
       .editOrNewMetadata()
-        .withName(TEST_SECRET_NAME)
-        .withNamespace(kubernetesTestComponents.namespace)
+        .withName(secretName)
         .endMetadata()
       .addToStringData(TEST_SECRET_KEY, TEST_SECRET_VALUE)
       .done()
   }
 
-  private def checkTestSecret(pod: Pod, withInitContainer: Boolean = false): Unit = {
+  private def checkTestSecret(
+      secretName: String,
+      pod: Pod,
+      withInitContainer: Boolean = false): Unit = {
     val testSecretVolume = pod.getSpec.getVolumes.asScala.filter { volume =>
-      volume.getName == s"$TEST_SECRET_NAME-volume"
+      volume.getName == s"$secretName-volume"
     }
     assert(testSecretVolume.size === 1)
-    assert(testSecretVolume.head.getSecret.getSecretName === TEST_SECRET_NAME)
+    assert(testSecretVolume.head.getSecret.getSecretName === secretName)
 
-    checkTestSecretInContainer(pod.getSpec.getContainers.get(0))
+    checkTestSecretInContainer(secretName, pod.getSpec.getContainers.get(0))
 
     if (withInitContainer) {
-      checkTestSecretInContainer(pod.getSpec.getInitContainers.get(0))
+      checkTestSecretInContainer(secretName, pod.getSpec.getInitContainers.get(0))
     }
   }
 
-  private def checkTestSecretInContainer(container: Container): Unit = {
+  private def checkTestSecretInContainer(secretName: String, container: Container): Unit = {
     val testSecret = container.getVolumeMounts.asScala.filter { mount =>
-      mount.getName == s"$TEST_SECRET_NAME-volume"
+      mount.getName == s"$secretName-volume"
     }
     assert(testSecret.size === 1)
     assert(testSecret.head.getMountPath === TEST_SECRET_MOUNT_PATH)
+  }
+
+  private def deleteTestSecret(secretName: String): Unit = {
+    kubernetesTestComponents.kubernetesClient.secrets
+      .withName(secretName)
+      .delete()
+
+    Eventually.eventually(TIMEOUT, INTERVAL) {
+      assert(kubernetesTestComponents.kubernetesClient.secrets.withName(secretName).get() == null)
+    }
   }
 }
 
@@ -318,7 +375,7 @@ private[spark] object KubernetesSuite {
   val SPARK_PI_MAIN_CLASS: String = "org.apache.spark.examples.SparkPi"
   val SPARK_PAGE_RANK_MAIN_CLASS: String = "org.apache.spark.examples.SparkPageRank"
 
-  val TEST_SECRET_NAME = "test-secret"
+  val TEST_SECRET_NAME_PREFIX = "test-secret-"
   val TEST_SECRET_KEY = "test-key"
   val TEST_SECRET_VALUE = "test-data"
   val TEST_SECRET_MOUNT_PATH = "/etc/secrets"
