@@ -75,7 +75,7 @@ then
   fi
   cd $SPARK_REPO_LOCAL_DIR
   git checkout -B $BRANCH origin/$branch
-  ./dev/make-distribution.sh --tgz -Phadoop-2.7 -Pkubernetes -DskipTests;
+  ./dev/make-distribution.sh --tgz -Phadoop-2.7 -Pkubernetes -Phive -Phive-thriftserver -DskipTests;
   SPARK_TGZ=$(find $SPARK_REPO_LOCAL_DIR -name spark-*.tgz)
   echo "Built Spark TGZ at $SPARK_TGZ".
   cd -
