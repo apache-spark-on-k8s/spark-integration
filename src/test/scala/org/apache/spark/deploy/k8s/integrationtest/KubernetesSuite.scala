@@ -105,7 +105,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     runSparkPiAndVerifyCompletion(appArgs = Array("5"))
   }
 
-  test("Run Spark ThriftServer") {
+  test("Run Spark Thrift Server") {
     runThriftServerAndVerifyQuery()
   }
 
