@@ -17,6 +17,8 @@
 # limitations under the License.
 #
 
+source ./include/util.sh
+
 TEST_ROOT_DIR=$(git rev-parse --show-toplevel)
 BRANCH="master"
 SPARK_REPO="https://github.com/apache/spark"
@@ -78,21 +80,7 @@ done
 if [[ $SPARK_TGZ == "N/A" ]];
 then
   echo "Cloning $SPARK_REPO into $SPARK_REPO_LOCAL_DIR and checking out $BRANCH."
-
-  # clone spark distribution if needed.
-  if [ -d "$SPARK_REPO_LOCAL_DIR" ];
-  then
-    (cd $SPARK_REPO_LOCAL_DIR && git fetch origin $BRANCH);
-  else
-    mkdir -p $SPARK_REPO_LOCAL_DIR;
-    git clone -b $BRANCH --single-branch $SPARK_REPO $SPARK_REPO_LOCAL_DIR;
-  fi
-  cd $SPARK_REPO_LOCAL_DIR
-  git checkout -B $BRANCH origin/$BRANCH
-  ./dev/make-distribution.sh --tgz -Phadoop-2.7 -Pkubernetes -DskipTests;
-  SPARK_TGZ=$(find $SPARK_REPO_LOCAL_DIR -name spark-*.tgz)
-  echo "Built Spark TGZ at $SPARK_TGZ".
-  cd -
+  clone_build_spark $SPARK_REPO $SPARK_REPO_LOCAL_DIR $BRANCH
 fi
 
 cd $TEST_ROOT_DIR
