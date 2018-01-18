@@ -228,22 +228,23 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       .getItems
       .get(0)
     driverPodChecker(driverPod)
-
     val driverPodResource = kubernetesTestComponents.kubernetesClient
-        .pods
-        .withName(driverPod.getMetadata.getName)
-    val localPort = driverPodResource.portForward(10000).getLocalPort
-    val jdbcUri = s"jdbc:hive2://localhost:$localPort/"
-    val connection = DriverManager.getConnection(jdbcUri, "user", "pass")
-    val statement = connection.createStatement()
-    try {
-      val resultSet = statement.executeQuery("select 42")
-      resultSet.next()
-      assert(resultSet.getInt(1) == 42)
-    } finally {
-      statement.close()
-      connection.close()
-      driverPodResource.delete()
+      .pods
+      .withName(driverPod.getMetadata.getName)
+    
+    Eventually.eventually(TIMEOUT, INTERVAL) {
+      val localPort = driverPodResource.portForward(10000).getLocalPort
+      val jdbcUri = s"jdbc:hive2://localhost:$localPort/"
+      val connection = DriverManager.getConnection(jdbcUri, "user", "pass")
+      val statement = connection.createStatement()
+      try {
+        val resultSet = statement.executeQuery("select 42")
+        resultSet.next()
+        assert(resultSet.getInt(1) == 42)
+      } finally {
+        statement.close()
+        connection.close()
+      }
     }
   }
 
