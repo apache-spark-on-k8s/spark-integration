@@ -29,9 +29,9 @@ SPARK_REPO="https://github.com/apache/spark"
 SPARK_REPO_LOCAL_DIR="$TEST_ROOT_DIR/target/spark"
 
 ## Install basic dependencies
-#echo "deb http://http.debian.net/debian jessie-backports main" >> /etc/apt/sources.list
-#apt-get update && apt-get install -y curl wget git tar uuid-runtime
-#apt-get install -t jessie-backports -y openjdk-8-jdk
+echo "deb http://http.debian.net/debian jessie-backports main" >> /etc/apt/sources.list
+apt-get update && apt-get install -y curl wget git tar uuid-runtime
+apt-get install -t jessie-backports -y openjdk-8-jdk
 
 # Set up config.
 MASTER=$(kubectl cluster-info | head -n 1 | grep -oE "https?://[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]+)?")
