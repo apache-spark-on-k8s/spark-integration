@@ -232,8 +232,8 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     val driverPodResource = kubernetesTestComponents.kubernetesClient
         .pods
         .withName(driverPod.getMetadata.getName)
-    driverPodResource.portForward(10000,10000)
-    val jdbcUri = s"jdbc:hive2://localhost:10000/"
+    val localPort = driverPodResource.portForward(10000).getLocalPort
+    val jdbcUri = s"jdbc:hive2://localhost:$localPort/"
     val connection = DriverManager.getConnection(jdbcUri, "user", "pass")
     val statement = connection.createStatement()
     try {
