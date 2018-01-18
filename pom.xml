@@ -177,6 +177,10 @@
             <spark.kubernetes.test.imageTagFile>${spark.kubernetes.test.imageTagFile}</spark.kubernetes.test.imageTagFile>
             <spark.kubernetes.test.unpackSparkDir>${spark.kubernetes.test.unpackSparkDir}</spark.kubernetes.test.unpackSparkDir>
             <spark.kubernetes.test.imageRepo>${spark.kubernetes.test.imageRepo}</spark.kubernetes.test.imageRepo>
+            <spark.kubernetes.test.deployMode>${spark.kubernetes.test.deployMode}</spark.kubernetes.test.deployMode>
+            <spark.kubernetes.test.master>${spark.kubernetes.test.master}</spark.kubernetes.test.master>
+            <spark.kubernetes.test.namespace>${spark.kubernetes.test.namespace}</spark.kubernetes.test.namespace>
+            <spark.kubernetes.test.serviceAccountName>${spark.kubernetes.test.serviceAccountName}</spark.kubernetes.test.serviceAccountName>
           </systemProperties>
           <tagsToExclude>${test.exclude.tags}</tagsToExclude>
         </configuration>

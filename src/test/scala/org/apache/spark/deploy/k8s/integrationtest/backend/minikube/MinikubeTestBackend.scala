@@ -21,6 +21,7 @@ import io.fabric8.kubernetes.client.DefaultKubernetesClient
 import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackend
 
 private[spark] object MinikubeTestBackend extends IntegrationTestBackend {
+
   private var defaultClient: DefaultKubernetesClient = _
 
   override def initialize(): Unit = {

@@ -14,26 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.spark.deploy.k8s.integrationtest.backend.GCE
+package org.apache.spark.deploy.k8s.integrationtest.backend.cloud
 
 import io.fabric8.kubernetes.client.{ConfigBuilder, DefaultKubernetesClient}
 
 import org.apache.spark.deploy.k8s.integrationtest.Utils
 import org.apache.spark.deploy.k8s.integrationtest.backend.IntegrationTestBackend
-import org.apache.spark.deploy.k8s.integrationtest.config._
 
-private[spark] class GCETestBackend(val master: String) extends IntegrationTestBackend {
+private[spark] object CloudTestBackend extends IntegrationTestBackend {
+
   private var defaultClient: DefaultKubernetesClient = _
 
   override def initialize(): Unit = {
+    val masterUrl = Option(System.getProperty("spark.kubernetes.test.master"))
+      .getOrElse(throw new RuntimeException("Kubernetes master URL is not set"))
     val k8sConf = new ConfigBuilder()
       .withApiVersion("v1")
-      .withMasterUrl(Utils.checkAndGetK8sMasterUrl(master).replaceFirst("k8s://", ""))
+      .withMasterUrl(Utils.checkAndGetK8sMasterUrl(masterUrl).replaceFirst("k8s://", ""))
       .build()
     defaultClient = new DefaultKubernetesClient(k8sConf)
   }
 
-  override def getKubernetesClient(): DefaultKubernetesClient = {
+  override def getKubernetesClient: DefaultKubernetesClient = {
     defaultClient
   }
 }

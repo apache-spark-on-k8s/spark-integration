@@ -26,7 +26,12 @@ import org.scalatest.concurrent.Eventually
 
 private[spark] class KubernetesTestComponents(defaultClient: DefaultKubernetesClient) {
 
-  val namespace = UUID.randomUUID().toString.replaceAll("-", "")
+  val namespaceOption = Option(System.getProperty("spark.kubernetes.test.namespace"))
+  val hasUserSpecifiedNamespace = namespaceOption.isDefined
+  val namespace = namespaceOption.getOrElse(UUID.randomUUID().toString.replaceAll("-", ""))
+  private val serviceAccountName =
+    Option(System.getProperty("spark.kubernetes.test.serviceAccountName"))
+      .getOrElse("default")
   val kubernetesClient = defaultClient.inNamespace(namespace)
   val clientConfig = kubernetesClient.getConfiguration
 
@@ -61,6 +66,7 @@ private[spark] class KubernetesTestComponents(defaultClient: DefaultKubernetesCl
       .set("spark.ui.enabled", "true")
       .set("spark.testing", "false")
       .set("spark.kubernetes.submission.waitAppCompletion", "false")
+      .set("spark.kubernetes.authenticate.driver.serviceAccountName", serviceAccountName)
   }
 }
 
@@ -68,14 +74,14 @@ private[spark] class SparkAppConf {
 
   private val map = mutable.Map[String, String]()
 
-  def set(key:String, value: String): SparkAppConf = {
+  def set(key: String, value: String): SparkAppConf = {
     map.put(key, value)
     this
   }
 
   def get(key: String): String = map.getOrElse(key, "")
 
-  def setJars(jars: Seq[String]) = set("spark.jars", jars.mkString(","))
+  def setJars(jars: Seq[String]): Unit = set("spark.jars", jars.mkString(","))
 
   override def toString: String = map.toString
 
@@ -97,10 +103,10 @@ private[spark] object SparkAppLauncher extends Logging {
     val sparkSubmitExecutable = sparkHomeDir.resolve(Paths.get("bin", "spark-submit"))
     logInfo(s"Launching a spark app with arguments $appArguments and conf $appConf")
     val commandLine = Array(sparkSubmitExecutable.toFile.getAbsolutePath,
-        "--deploy-mode", "cluster",
-        "--class", appArguments.mainClass,
-        "--master", appConf.get("spark.master")
-      ) ++ appConf.toStringArray :+
+      "--deploy-mode", "cluster",
+      "--class", appArguments.mainClass,
+      "--master", appConf.get("spark.master")
+    ) ++ appConf.toStringArray :+
       appArguments.mainAppResource :+
       appArguments.appArgs.mkString(" ")
     logInfo(s"Launching a spark app with command line: ${commandLine.mkString(" ")}")
