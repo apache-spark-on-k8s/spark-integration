@@ -103,11 +103,6 @@
       <version>${hive.version}</version>
     </dependency>
     <dependency>
-      <groupId>${hive.group}</groupId>
-      <artifactId>hive-jdbc</artifactId>
-      <version>${hive.version}</version>
-    </dependency>
-    <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
       <version>${scala.version}</version>
