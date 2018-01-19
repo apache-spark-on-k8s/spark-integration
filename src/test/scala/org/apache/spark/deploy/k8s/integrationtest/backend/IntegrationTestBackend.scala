@@ -19,7 +19,7 @@ package org.apache.spark.deploy.k8s.integrationtest.backend
 
 import io.fabric8.kubernetes.client.DefaultKubernetesClient
 
-import org.apache.spark.deploy.k8s.integrationtest.backend.GCE.GCETestBackend
+import org.apache.spark.deploy.k8s.integrationtest.backend.cloud.CloudTestBackend
 import org.apache.spark.deploy.k8s.integrationtest.backend.minikube.MinikubeTestBackend
 
 private[spark] trait IntegrationTestBackend {
@@ -29,9 +29,13 @@ private[spark] trait IntegrationTestBackend {
 }
 
 private[spark] object IntegrationTestBackendFactory {
-  def getTestBackend(): IntegrationTestBackend = {
-    Option(System.getProperty("spark.kubernetes.test.master"))
-      .map(new GCETestBackend(_))
-      .getOrElse(MinikubeTestBackend)
+  def getTestBackend: IntegrationTestBackend = {
+    val deployMode = Option(System.getProperty("spark.kubernetes.test.deployMode"))
+      .getOrElse("minikube")
+    if (deployMode == "minikube") {
+      MinikubeTestBackend
+    } else {
+      CloudTestBackend
+    }
   }
 }
