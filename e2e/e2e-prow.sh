@@ -43,12 +43,11 @@ IMAGE_REPO="gcr.io/spark-testing-191023"
 echo "Cloning $SPARK_REPO into $SPARK_REPO_LOCAL_DIR and checking out $BRANCH."
 clone_build_spark $SPARK_REPO $SPARK_REPO_LOCAL_DIR $BRANCH
 
-
 # Spark distribution
 properties=(
   -Dspark.kubernetes.test.master=k8s://$MASTER \
   -Dspark.kubernetes.test.imageRepo=$IMAGE_REPO \
-  -Dspark.kubernetes.test.sparkTgz=$SPARK_TGZ \
+  -Dspark.kubernetes.test.sparkTgz="$SPARK_TGZ" \
   -Dspark.kubernetes.test.deployMode=cloud \
   -Dspark.kubernetes.test.namespace=default \
   -Dspark.kubernetes.test.serviceAccountName=default
@@ -56,7 +55,7 @@ properties=(
 
 # Run tests.
 echo "Starting test with ${properties[@]}"
-build/mvn integration-test ${properties[@]}
+build/mvn integration-test "${properties[@]}"
 
 # Copy out the junit xml files for consumption by k8s test-infra.
 ls -1 ./integration-test/target/surefire-reports/*.xml | cat -n | while read n f; do cp "$f" "/workspace/_artifacts/junit_0$n.xml"; done
