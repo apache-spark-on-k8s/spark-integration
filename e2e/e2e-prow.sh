@@ -20,6 +20,9 @@
 
 set -ex
 
+# set cwd correctly
+cd "$(dirname "$0")/../"
+
 # Include requisite scripts
 source ./include/util.sh
 
