@@ -247,7 +247,8 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
   private def runThriftServerAndVerifyQuery(
                                              driverPodChecker: Pod => Unit = doBasicDriverPodCheck,
-                                             appArgs: Array[String] = Array.empty[String]): Unit = {
+                                             appArgs: Array[String] = Array.empty[String],
+                                              appLocator: String = appLocator): Unit = {
     val appArguments = SparkAppArguments(
       mainAppResource = "",
       mainClass = "org.apache.spark.sql.hive.thriftserver.HiveThriftServer2",
@@ -255,7 +256,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     SparkAppLauncher.launch(appArguments, sparkAppConf, TIMEOUT.value.toSeconds.toInt, sparkHomeDir)
     val driverPod = kubernetesTestComponents.kubernetesClient
       .pods
-      .withLabel("spark-app-locator", APP_LOCATOR_LABEL)
+      .withLabel("spark-app-locator", appLocator)
       .withLabel("spark-role", "driver")
       .list()
       .getItems
