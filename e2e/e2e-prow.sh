@@ -29,6 +29,7 @@ SPARK_REPO="https://github.com/apache/spark"
 SPARK_REPO_LOCAL_DIR="$TEST_ROOT_DIR/target/spark"
 
 ## Install basic dependencies
+## These are for the kubekins-e2e environment in https://github.com/kubernetes/test-infra/tree/master/images/kubekins-e2e
 echo "deb http://http.debian.net/debian jessie-backports main" >> /etc/apt/sources.list
 apt-get update && apt-get install -y curl wget git tar uuid-runtime
 apt-get install -t jessie-backports -y openjdk-8-jdk
