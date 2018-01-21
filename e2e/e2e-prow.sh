@@ -59,7 +59,7 @@ properties=(
 
 # Run tests.
 echo "Starting test with ${properties[@]}"
-build/mvn integration-test "${properties[@]}"
+build/mvn integration-test "${properties[@]}" || :
 
 # Copy out the junit xml files for consumption by k8s test-infra.
 ls -1 ./target/surefire-reports/*.xml | cat -n | while read n f; do cp "$f" "/workspace/_artifacts/junit_0$n.xml"; done
