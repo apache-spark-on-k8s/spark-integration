@@ -53,9 +53,13 @@ properties=(
   -Dspark.kubernetes.test.imageRepo=$IMAGE_REPO \
   -Dspark.kubernetes.test.sparkTgz="$SPARK_TGZ" \
   -Dspark.kubernetes.test.deployMode=cloud \
-  -Dspark.kubernetes.test.namespace=default \
-  -Dspark.kubernetes.test.serviceAccountName=default
+  -Dspark.kubernetes.test.namespace=spark \
+  -Dspark.kubernetes.test.serviceAccountName=spark-sa
 )
+
+# Run kubectl commands and create appropriate roles
+kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user pr-kubekins@kubernetes-jenkins-pull.iam.gserviceaccount.com
+kubectl create -f ./dev/spark-rbac.yaml
 
 # Run tests.
 echo "Starting test with ${properties[@]}"
