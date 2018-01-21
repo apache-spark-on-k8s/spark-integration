@@ -20,10 +20,12 @@ import java.io.File
 import java.nio.file.{Path, Paths}
 import java.util.UUID
 import java.util.regex.Pattern
+import java.sql.DriverManager
 
 import scala.collection.JavaConverters._
 import com.google.common.io.PatternFilenameFilter
 import io.fabric8.kubernetes.api.model.{Container, Pod}
+import org.apache.hive.jdbc.HiveDriver
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FunSuite}
 import org.scalatest.concurrent.{Eventually, PatienceConfiguration}
 import org.scalatest.time.{Minutes, Seconds, Span}
@@ -119,6 +121,10 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
   test("Run SparkPi with an argument.") {
     runSparkPiAndVerifyCompletion(appArgs = Array("5"))
+  }
+
+  test("Run Spark Thrift Server") {
+    runThriftServerAndVerifyQuery()
   }
 
   test("Run SparkPi with custom labels, annotations, and environment variables.") {
@@ -237,6 +243,46 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       driverPodChecker,
       executorPodChecker,
       appLocator)
+  }
+
+  private def runThriftServerAndVerifyQuery(
+      driverPodChecker: Pod => Unit = doBasicDriverPodCheck,
+      appArgs: Array[String] = Array.empty[String],
+      appLocator: String = appLocator): Unit = {
+    val appArguments = SparkAppArguments(
+      mainAppResource = "",
+      mainClass = "org.apache.spark.sql.hive.thriftserver.HiveThriftServer2",
+      appArgs = appArgs)
+    SparkAppLauncher.launch(appArguments, sparkAppConf, TIMEOUT.value.toSeconds.toInt, sparkHomeDir)
+    val driverPod = kubernetesTestComponents.kubernetesClient
+      .pods
+      .withLabel("spark-app-locator", appLocator)
+      .withLabel("spark-role", "driver")
+      .list()
+      .getItems
+      .get(0)
+    driverPodChecker(driverPod)
+    val driverPodResource = kubernetesTestComponents.kubernetesClient
+      .pods
+      .withName(driverPod.getMetadata.getName)
+    
+    Eventually.eventually(TIMEOUT, INTERVAL) {
+      val localPort = driverPodResource.portForward(10000).getLocalPort
+      val jdbcUri = s"jdbc:hive2://localhost:$localPort/"
+      val connection = DriverManager.getConnection(jdbcUri, "user", "pass")
+      val statement = connection.createStatement()
+      try {
+        val resultSet = statement.executeQuery("select 42")
+        resultSet.next()
+        assert(resultSet.getInt(1) == 42)
+      } finally {
+        try {
+          statement.close()
+        } finally {
+          connection.close()
+        }
+      }
+    }
   }
 
   private def runSparkApplicationAndVerifyCompletion(

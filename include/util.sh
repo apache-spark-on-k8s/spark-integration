@@ -31,7 +31,7 @@ clone_build_spark() {
   fi
   cd $spark_repo_local_dir
   git checkout -B $branch origin/$branch
-  ./dev/make-distribution.sh --tgz -Phadoop-2.7 -Pkubernetes -DskipTests;
+  ./dev/make-distribution.sh --tgz -Phadoop-2.7 -Pkubernetes -Phive -Phive-thriftserver -DskipTests;
   SPARK_TGZ=$(find $spark_repo_local_dir -name spark-*.tgz)
 
   popd
