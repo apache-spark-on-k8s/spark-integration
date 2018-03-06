@@ -172,39 +172,9 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
 
   test("Run PageRank using remote data file") {
     sparkAppConf
-      .set("spark.kubernetes.mountDependencies.filesDownloadDir",
-        CONTAINER_LOCAL_FILE_DOWNLOAD_PATH)
       .set("spark.files", REMOTE_PAGE_RANK_DATA_FILE)
-    runSparkPageRankAndVerifyCompletion(
-      appArgs = Array(CONTAINER_LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE))
-  }
-
-  test("Run PageRank using remote data file with test secret mounted into the driver and " +
-    "executors") {
-    val secretName = TEST_SECRET_NAME_PREFIX + UUID.randomUUID().toString.replaceAll("-", "")
-    createTestSecret(secretName)
-
-    sparkAppConf
-      .set("spark.kubernetes.mountDependencies.filesDownloadDir",
-        CONTAINER_LOCAL_FILE_DOWNLOAD_PATH)
-      .set("spark.files", REMOTE_PAGE_RANK_DATA_FILE)
-      .set(s"spark.kubernetes.driver.secrets.$secretName", TEST_SECRET_MOUNT_PATH)
-      .set(s"spark.kubernetes.executor.secrets.$secretName", TEST_SECRET_MOUNT_PATH)
-
-    try {
-      runSparkPageRankAndVerifyCompletion(
-        appArgs = Array(CONTAINER_LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE),
-        driverPodChecker = (driverPod: Pod) => {
-          doBasicDriverPodCheck(driverPod)
-          checkTestSecret(secretName, driverPod, withInitContainer = true)
-        },
-        executorPodChecker = (executorPod: Pod) => {
-          doBasicExecutorPodCheck(executorPod)
-          checkTestSecret(secretName, executorPod, withInitContainer = true)
-        })
-    } finally {
-      deleteTestSecret(secretName)
-    }
+    runSparkPiRemoteCheckAndVerifyCompletion(
+      appArgs = Array("5"))
   }
 
   private def runSparkPiAndVerifyCompletion(
@@ -223,7 +193,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       appLocator)
   }
 
-  private def runSparkPageRankAndVerifyCompletion(
+  private def runSparkPiRemoteCheckAndVerifyCompletion(
       appResource: String = containerLocalSparkDistroExamplesJar,
       driverPodChecker: Pod => Unit = doBasicDriverPodCheck,
       executorPodChecker: Pod => Unit = doBasicExecutorPodCheck,
@@ -231,8 +201,9 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       appLocator: String = appLocator): Unit = {
     runSparkApplicationAndVerifyCompletion(
       appResource,
-      SPARK_PAGE_RANK_MAIN_CLASS,
-      Seq("1 has rank", "2 has rank", "3 has rank", "4 has rank"),
+      SPARK_PI_MAIN_CLASS,
+      Seq(s"Added file $REMOTE_PAGE_RANK_DATA_FILE",
+        s"Fetching $REMOTE_PAGE_RANK_DATA_FILE"),
       appArgs,
       driverPodChecker,
       executorPodChecker,
@@ -373,19 +344,14 @@ private[spark] object KubernetesSuite {
   val TIMEOUT = PatienceConfiguration.Timeout(Span(2, Minutes))
   val INTERVAL = PatienceConfiguration.Interval(Span(2, Seconds))
   val SPARK_PI_MAIN_CLASS: String = "org.apache.spark.examples.SparkPi"
-  val SPARK_PAGE_RANK_MAIN_CLASS: String = "org.apache.spark.examples.SparkPageRank"
 
   val TEST_SECRET_NAME_PREFIX = "test-secret-"
   val TEST_SECRET_KEY = "test-key"
   val TEST_SECRET_VALUE = "test-data"
   val TEST_SECRET_MOUNT_PATH = "/etc/secrets"
 
-  val CONTAINER_LOCAL_FILE_DOWNLOAD_PATH = "/var/spark-data/spark-files"
-
   val REMOTE_PAGE_RANK_DATA_FILE =
     "https://storage.googleapis.com/spark-k8s-integration-tests/files/pagerank_data.txt"
-  val CONTAINER_LOCAL_DOWNLOADED_PAGE_RANK_DATA_FILE =
-    s"$CONTAINER_LOCAL_FILE_DOWNLOAD_PATH/pagerank_data.txt"
 
   case object ShuffleNotReadyException extends Exception
 }
