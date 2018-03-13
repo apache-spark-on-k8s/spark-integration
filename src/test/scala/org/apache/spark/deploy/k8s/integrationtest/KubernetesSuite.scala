@@ -170,11 +170,11 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     }
   }
 
-  test("Run PageRank using remote data file") {
+  test("Run FileCheck using a Remote Data File") {
     sparkAppConf
       .set("spark.files", REMOTE_PAGE_RANK_DATA_FILE)
-    runSparkPiRemoteCheckAndVerifyCompletion(
-      appArgs = Array("5"))
+    runSparkRemoteCheckAndVerifyCompletion(
+      appArgs = Array(REMOTE_PAGE_RANK_FILE_NAME))
   }
 
   private def runSparkPiAndVerifyCompletion(
@@ -193,7 +193,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       appLocator)
   }
 
-  private def runSparkPiRemoteCheckAndVerifyCompletion(
+  private def runSparkRemoteCheckAndVerifyCompletion(
       appResource: String = containerLocalSparkDistroExamplesJar,
       driverPodChecker: Pod => Unit = doBasicDriverPodCheck,
       executorPodChecker: Pod => Unit = doBasicExecutorPodCheck,
@@ -201,9 +201,8 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       appLocator: String = appLocator): Unit = {
     runSparkApplicationAndVerifyCompletion(
       appResource,
-      SPARK_PI_MAIN_CLASS,
-      Seq(s"Added file $REMOTE_PAGE_RANK_DATA_FILE",
-        s"Fetching $REMOTE_PAGE_RANK_DATA_FILE"),
+      SPARK_REMOTE_MAIN_CLASS,
+      Seq(s"Mounting of ${appArgs.head} was true"),
       appArgs,
       driverPodChecker,
       executorPodChecker,
@@ -344,6 +343,7 @@ private[spark] object KubernetesSuite {
   val TIMEOUT = PatienceConfiguration.Timeout(Span(2, Minutes))
   val INTERVAL = PatienceConfiguration.Interval(Span(2, Seconds))
   val SPARK_PI_MAIN_CLASS: String = "org.apache.spark.examples.SparkPi"
+  val SPARK_REMOTE_MAIN_CLASS: String = "org.apache.spark.examples.SparkRemoteFileTest"
 
   val TEST_SECRET_NAME_PREFIX = "test-secret-"
   val TEST_SECRET_KEY = "test-key"
@@ -352,6 +352,7 @@ private[spark] object KubernetesSuite {
 
   val REMOTE_PAGE_RANK_DATA_FILE =
     "https://storage.googleapis.com/spark-k8s-integration-tests/files/pagerank_data.txt"
+  val REMOTE_PAGE_RANK_FILE_NAME = "pagerank_data.txt"
 
   case object ShuffleNotReadyException extends Exception
 }
