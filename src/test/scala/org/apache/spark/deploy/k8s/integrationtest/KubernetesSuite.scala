@@ -170,6 +170,13 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     }
   }
 
+  test("Test extraJVMProprties being present on Driver") {
+    sparkAppConf
+      .set("spark.driver.extraJavaOptions", "-Dspark.test.foo=spark.test.bar")
+    runSparkJVMCheckAndVerifyCompletion(
+      expectedJVMValue=Seq("spark.test.foo","spark.test.foo"))
+  }
+
   test("Run FileCheck using a Remote Data File") {
     sparkAppConf
       .set("spark.files", REMOTE_PAGE_RANK_DATA_FILE)
@@ -207,6 +214,38 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       driverPodChecker,
       executorPodChecker,
       appLocator)
+  }
+
+  private def runSparkJVMCheckAndVerifyCompletion(
+      appResource: String = containerLocalSparkDistroExamplesJar,
+      mainClass: String = SPARK_DRIVER_MAIN_CLASS,
+      driverPodChecker: Pod => Unit = doBasicDriverPodCheck,
+      appArgs: Array[String] = Array("5"),
+      expectedJVMValue: Seq[String]): Unit = {
+    val appArguments = SparkAppArguments(
+      mainAppResource = appResource,
+      mainClass = mainClass,
+      appArgs = appArgs)
+    SparkAppLauncher.launch(appArguments, sparkAppConf, TIMEOUT.value.toSeconds.toInt, sparkHomeDir)
+
+    val driverPod = kubernetesTestComponents.kubernetesClient
+      .pods()
+      .withLabel("spark-app-locator", appLocator)
+      .withLabel("spark-role", "driver")
+      .list()
+      .getItems
+      .get(0)
+    doBasicDriverPodCheck(driverPod)
+
+    Eventually.eventually(TIMEOUT, INTERVAL) {
+      expectedJVMValue.foreach { e =>
+        assert(kubernetesTestComponents.kubernetesClient
+          .pods()
+          .withName(driverPod.getMetadata.getName)
+          .getLog
+          .contains(e), "The application did not complete.")
+      }
+    }
   }
 
   private def runSparkApplicationAndVerifyCompletion(
@@ -344,6 +383,7 @@ private[spark] object KubernetesSuite {
   val INTERVAL = PatienceConfiguration.Interval(Span(2, Seconds))
   val SPARK_PI_MAIN_CLASS: String = "org.apache.spark.examples.SparkPi"
   val SPARK_REMOTE_MAIN_CLASS: String = "org.apache.spark.examples.SparkRemoteFileTest"
+  val SPARK_DRIVER_MAIN_CLASS: String = "org.apache.spark.examples.DriverSubmissionTest"
 
   val TEST_SECRET_NAME_PREFIX = "test-secret-"
   val TEST_SECRET_KEY = "test-key"
