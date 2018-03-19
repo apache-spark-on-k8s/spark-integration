@@ -170,7 +170,7 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     }
   }
 
-  test("Test extraJVMProprties being present on Driver") {
+  test("Run extraJVMOptions check on Driver") {
     sparkAppConf
       .set("spark.driver.extraJavaOptions", "-Dspark.test.foo=spark.test.bar")
     runSparkJVMCheckAndVerifyCompletion(
