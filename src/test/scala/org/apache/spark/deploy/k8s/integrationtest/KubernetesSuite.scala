@@ -170,14 +170,14 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     }
   }
 
-  test("Run extraJVMOptions check on Driver") {
+  test("Run extraJVMOptions check on driver") {
     sparkAppConf
       .set("spark.driver.extraJavaOptions", "-Dspark.test.foo=spark.test.bar")
     runSparkJVMCheckAndVerifyCompletion(
       expectedJVMValue=Seq("(spark.test.foo,spark.test.bar)"))
   }
 
-  test("Run FileCheck using a Remote Data File") {
+  test("Run SparkRemoteFileTest using a remote data file") {
     sparkAppConf
       .set("spark.files", REMOTE_PAGE_RANK_DATA_FILE)
     runSparkRemoteCheckAndVerifyCompletion(
