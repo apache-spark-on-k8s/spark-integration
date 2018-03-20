@@ -2,8 +2,6 @@
 layout: global
 title: Spark on Kubernetes Integration Tests
 ---
-Spurious change 1 to trigger tests
-
 # Running the Kubernetes Integration Tests
 
 Note that the integration test framework is currently being heavily revised and
