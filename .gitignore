@@ -9,3 +9,4 @@ build/run-mvn
 *.log
 *.iml
 *.swp
+*.tgz
