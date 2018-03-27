@@ -98,12 +98,13 @@ private[spark] object SparkAppLauncher extends Logging {
   def launch(
       appArguments: SparkAppArguments,
       appConf: SparkAppConf,
+      deployMode: String,
       timeoutSecs: Int,
       sparkHomeDir: Path): Unit = {
     val sparkSubmitExecutable = sparkHomeDir.resolve(Paths.get("bin", "spark-submit"))
     logInfo(s"Launching a spark app with arguments $appArguments and conf $appConf")
     val commandLine = Array(sparkSubmitExecutable.toFile.getAbsolutePath,
-      "--deploy-mode", "cluster",
+      "--deploy-mode", deployMode,
       "--class", appArguments.mainClass,
       "--master", appConf.get("spark.master")
     ) ++ appConf.toStringArray :+
