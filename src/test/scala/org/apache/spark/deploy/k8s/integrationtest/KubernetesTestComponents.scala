@@ -99,15 +99,21 @@ private[spark] object SparkAppLauncher extends Logging {
       appArguments: SparkAppArguments,
       appConf: SparkAppConf,
       timeoutSecs: Int,
-      sparkHomeDir: Path): Unit = {
+      sparkHomeDir: Path,
+      isJVM: Boolean): Unit = {
     val sparkSubmitExecutable = sparkHomeDir.resolve(Paths.get("bin", "spark-submit"))
     logInfo(s"Launching a spark app with arguments $appArguments and conf $appConf")
-    val commandLine = mutable.ArrayBuffer(sparkSubmitExecutable.toFile.getAbsolutePath,
+    val preCommandLine = if (isJVM) {
+      mutable.ArrayBuffer(sparkSubmitExecutable.toFile.getAbsolutePath,
       "--deploy-mode", "cluster",
       "--class", appArguments.mainClass,
-      "--master", appConf.get("spark.master")
-    ) ++ appConf.toStringArray :+
-      appArguments.mainAppResource
+      "--master", appConf.get("spark.master"))
+    } else {
+      mutable.ArrayBuffer(sparkSubmitExecutable.toFile.getAbsolutePath,
+        "--deploy-mode", "cluster",
+        "--master", appConf.get("spark.master"))
+    }
+    val commandLine = preCommandLine ++ appConf.toStringArray :+ appArguments.mainAppResource
     if (appArguments.appArgs.nonEmpty) {
       commandLine += appArguments.appArgs.mkString(" ")
     }
