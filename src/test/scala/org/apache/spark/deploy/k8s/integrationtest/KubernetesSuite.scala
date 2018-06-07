@@ -200,6 +200,41 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       isJVM = false)
   }
 
+  test("Run PySpark with Python2 to test a pyfiles example") {
+    sparkAppConf
+      .set("spark.kubernetes.container.image", s"${getTestImageRepo}/spark-py:${getTestImageTag}")
+      .set("spark.kubernetes.pyspark.pythonversion", "2")
+    runSparkApplicationAndVerifyCompletion(
+      appResource = PYSPARK_FILES,
+      mainClass = "",
+      expectedLogOnCompletion = Seq(
+        "Python runtime version check is: True",
+        "Python environment version check is: True"),
+      appArgs = Array("python"),
+      driverPodChecker = doBasicDriverPyPodCheck,
+      executorPodChecker = doBasicExecutorPyPodCheck,
+      appLocator = appLocator,
+      isJVM = false,
+      pyFiles = Some(PYSPARK_CONTAINER_TESTS))
+  }
+
+  test("Run PySpark with Python3 to test a pyfiles example") {
+    sparkAppConf
+      .set("spark.kubernetes.container.image", s"${getTestImageRepo}/spark-py:${getTestImageTag}")
+      .set("spark.kubernetes.pyspark.pythonversion", "3")
+    runSparkApplicationAndVerifyCompletion(
+      appResource = PYSPARK_FILES,
+      mainClass = "",
+      expectedLogOnCompletion = Seq(
+        "Python runtime version check is: True",
+        "Python environment version check is: True"),
+      appArgs = Array("python3"),
+      driverPodChecker = doBasicDriverPyPodCheck,
+      executorPodChecker = doBasicExecutorPyPodCheck,
+      appLocator = appLocator,
+      isJVM = false,
+      pyFiles = Some(PYSPARK_CONTAINER_TESTS))
+  }
 
   private def runSparkPiAndVerifyCompletion(
       appResource: String = containerLocalSparkDistroExamplesJar,
@@ -278,12 +313,19 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
       driverPodChecker: Pod => Unit,
       executorPodChecker: Pod => Unit,
       appLocator: String,
-      isJVM: Boolean): Unit = {
+      isJVM: Boolean,
+      pyFiles: Option[String] = None): Unit = {
     val appArguments = SparkAppArguments(
       mainAppResource = appResource,
       mainClass = mainClass,
       appArgs = appArgs)
-    SparkAppLauncher.launch(appArguments, sparkAppConf, TIMEOUT.value.toSeconds.toInt, sparkHomeDir, isJVM)
+    SparkAppLauncher.launch(
+      appArguments,
+      sparkAppConf,
+      TIMEOUT.value.toSeconds.toInt,
+      sparkHomeDir,
+      isJVM,
+      pyFiles)
 
     val driverPod = kubernetesTestComponents.kubernetesClient
       .pods()
@@ -420,6 +462,8 @@ private[spark] object KubernetesSuite {
   val SPARK_DRIVER_MAIN_CLASS: String = "org.apache.spark.examples.DriverSubmissionTest"
   val CONTAINER_LOCAL_PYSPARK: String = "local:///opt/spark/examples/src/main/python/"
   val PYSPARK_PI: String = CONTAINER_LOCAL_PYSPARK + "pi.py"
+  val PYSPARK_FILES: String = CONTAINER_LOCAL_PYSPARK + "pyfiles.py"
+  val PYSPARK_CONTAINER_TESTS: String = CONTAINER_LOCAL_PYSPARK + "py_container_checks.py"
   val TEST_SECRET_NAME_PREFIX = "test-secret-"
   val TEST_SECRET_KEY = "test-key"
   val TEST_SECRET_VALUE = "test-data"

@@ -100,7 +100,8 @@ private[spark] object SparkAppLauncher extends Logging {
       appConf: SparkAppConf,
       timeoutSecs: Int,
       sparkHomeDir: Path,
-      isJVM: Boolean): Unit = {
+      isJVM: Boolean,
+      pyFiles: Option[String] = None): Unit = {
     val sparkSubmitExecutable = sparkHomeDir.resolve(Paths.get("bin", "spark-submit"))
     logInfo(s"Launching a spark app with arguments $appArguments and conf $appConf")
     val preCommandLine = if (isJVM) {
@@ -113,7 +114,10 @@ private[spark] object SparkAppLauncher extends Logging {
         "--deploy-mode", "cluster",
         "--master", appConf.get("spark.master"))
     }
-    val commandLine = preCommandLine ++ appConf.toStringArray :+ appArguments.mainAppResource
+    val commandLine =
+      pyFiles.map(s => preCommandLine ++ Array("--py-files", s)).getOrElse(preCommandLine) ++
+        appConf.toStringArray :+ appArguments.mainAppResource
+
     if (appArguments.appArgs.nonEmpty) {
       commandLine += appArguments.appArgs.mkString(" ")
     }
