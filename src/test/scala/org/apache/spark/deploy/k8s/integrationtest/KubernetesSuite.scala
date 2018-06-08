@@ -462,6 +462,7 @@ private[spark] object KubernetesSuite {
   val PYSPARK_PI: String = CONTAINER_LOCAL_PYSPARK + "pi.py"
   val PYSPARK_FILES: String = CONTAINER_LOCAL_PYSPARK + "pyfiles.py"
   val PYSPARK_CONTAINER_TESTS: String = CONTAINER_LOCAL_PYSPARK + "py_container_checks.py"
+  
   val TEST_SECRET_NAME_PREFIX = "test-secret-"
   val TEST_SECRET_KEY = "test-key"
   val TEST_SECRET_VALUE = "test-data"
