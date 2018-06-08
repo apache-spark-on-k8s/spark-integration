@@ -303,8 +303,6 @@ private[spark] class KubernetesSuite extends FunSuite with BeforeAndAfterAll wit
     }
   }
 
-
-
   private def runSparkApplicationAndVerifyCompletion(
       appResource: String,
       mainClass: String,
