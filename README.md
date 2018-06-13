@@ -3,6 +3,10 @@ layout: global
 title: Spark on Kubernetes Integration Tests
 ---
 
+# This Repository is Frozen: CI is Moved to Apache Spark upstream.
+Now that Apache Spark has upstreamed integration testing for the Kubernetes back-end, all future CI related development will be submitted to Apache Spark upstream.
+
+
 # Running the Kubernetes Integration Tests
 
 Note that the integration test framework is currently being heavily revised and
